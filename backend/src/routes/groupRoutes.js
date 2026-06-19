@@ -1,16 +1,12 @@
 const express = require('express');
-const { createGroup, getGroups, inviteMember, getGroupMembers } = require('../controllers/groupController');
-const { createEvent, getGroupEvents } = require('../controllers/eventController');
-const authMiddleware = require('../middleware/authMiddleware');
 const router = express.Router();
+const { getGroups, createGroup } = require('../controllers/groupController');
+const auth = require('../middleware/auth');
 
-router.use(authMiddleware);
+// Obtener todos los grupos del usuario autenticado
+router.get('/', auth, getGroups);
 
-router.post('/', createGroup);
-router.get('/', getGroups);
-router.post('/:groupId/invite', inviteMember);
-router.get('/:groupId/members', getGroupMembers);
-router.post('/:groupId/events', createEvent);
-router.get('/:groupId/events', getGroupEvents);
+// Crear un nuevo grupo
+router.post('/', auth, createGroup);
 
 module.exports = router;
