@@ -11,10 +11,15 @@ connectDB();
 
 const app = express();
 
+// 🔥 CONFIGURACIÓN DE CORS - PERMITE TODAS TUS URLS
 const allowedOrigins = [
   'http://localhost:3000',
-  'https://tcalendar-online.vercel.app',
+  'http://localhost:5173',
+  'https://tcalendar-nine.vercel.app',
   'https://tcalendar-teo72holakases-projects.vercel.app',
+  'https://tcalendar-git-main-teo72holakases-projects.vercel.app',
+  'https://tcalendar-jivh11mgy-teo72holakases-projects.vercel.app',
+  'https://tcalendar-online.vercel.app',
   process.env.CLIENT_URL
 ].filter(Boolean);
 
