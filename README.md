@@ -9,8 +9,8 @@ Calendario colaborativo con backend Node.js + Express + MongoDB y frontend React
 
 ## Cómo usar la aplicación
 
-1. **Registrarse**: Ve a http://localhost:5173 y crea una cuenta con usuario y contraseña
-2. **Iniciar sesión**: Usa tus credenciales
+1. **Registrarse**: Crea una cuenta con usuario y contraseña
+2. **Iniciar sesión**: Usa tus credenciales (Usuario y Contraseña)
 3. **Crear grupo**: Desde el dashboard, haz clic en "Nuevo grupo"
 4. **Invitar miembros**: Dentro de un grupo, invita a otros usuarios por su nombre de usuario
 5. **Crear eventos**: Haz clic en una fecha en el calendario para crear un evento
