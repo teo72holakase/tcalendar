@@ -38,9 +38,9 @@ app.use(cors({
 app.use(express.json());
 
 // Rutas
-app.use('/api/auth', authRoutes);
-app.use('/api/groups', groupRoutes);
-app.use('/api/events', eventRoutes);
+app.use('/auth', authRoutes);
+app.use('/groups', groupRoutes);
+app.use('/events', eventRoutes);
 
 app.get('/', (req, res) => {
   res.json({ message: 'TCalendar API is running' });
