@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'https://tcalendar.onrender.com/api',
+  baseURL: 'https://tcalendar.onrender.com',
   headers: {
     'Content-Type': 'application/json',
   },
