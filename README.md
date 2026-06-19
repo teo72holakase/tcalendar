@@ -1,4 +1,4 @@
-# TCALENDAR
+![TCalendar](./tcalendar-banner.png)
 
 Calendario colaborativo con backend Node.js + Express + MongoDB y frontend React + TailwindCSS.
 
