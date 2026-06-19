@@ -1,0 +1,151 @@
+import { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { useGroup } from '../contexts/GroupContext';
+import Header from '../components/Header';
+import CalendarView from '../components/CalendarView';
+import EventFormModal from '../components/EventFormModal';
+import EventDetailsModal from '../components/EventDetailsModal';
+import InviteMemberModal from '../components/InviteMemberModal';
+
+const GroupPage = () => {
+  const { groupId } = useParams();
+  const { user } = useAuth();
+  const {
+    events,
+    members,
+    loadEvents,
+    createEvent,
+    removeEvent,
+    inviteToGroup,
+    loadMembers,
+    loading,
+    error,
+    message,
+    setError,
+    setMessage,
+  } = useGroup();
+
+  const [isEventModalOpen, setEventModalOpen] = useState(false);
+  const [isInviteOpen, setInviteOpen] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [selectedDate, setSelectedDate] = useState('');
+  const [eventError, setEventError] = useState('');
+  const [inviteError, setInviteError] = useState('');
+
+  useEffect(() => {
+    loadEvents(groupId);
+    loadMembers(groupId);
+  }, [groupId]);
+
+  const handleDateClick = (dateStr) => {
+    setSelectedDate(dateStr);
+    setEventModalOpen(true);
+  };
+
+  const handleEventClick = (eventData) => {
+    setSelectedEvent(eventData);
+  };
+
+  const handleEventSave = async (form) => {
+    if (!form.title.trim() || !form.dueDate) {
+      setEventError('Título y fecha de entrega son obligatorios');
+      return;
+    }
+    await createEvent(groupId, form);
+    setEventModalOpen(false);
+    setEventError('');
+  };
+
+  const handleEventDelete = async (event) => {
+    const deleted = await removeEvent(event._id);
+    if (deleted) {
+      setSelectedEvent(null);
+    }
+  };
+
+  const handleInvite = async (payload) => {
+    if (!payload.username.trim()) {
+      setInviteError('El usuario es obligatorio');
+      return;
+    }
+    const success = await inviteToGroup(groupId, payload);
+    if (success) {
+      setInviteOpen(false);
+      loadMembers(groupId);
+      setInviteError('');
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50">
+      <Header title="Calendario del grupo" />
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-3xl font-semibold text-slate-900">Eventos del grupo</h2>
+            <p className="mt-1 text-slate-600">Haz clic en una fecha para crear un evento o selecciona uno existente.</p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <button onClick={() => setInviteOpen(true)} className="rounded-2xl bg-brand-600 px-4 py-2 text-white hover:bg-brand-700">
+              Invitar miembro
+            </button>
+            <button onClick={() => setEventModalOpen(true)} className="rounded-2xl border border-slate-300 bg-white px-4 py-2 text-slate-900 hover:bg-slate-100">
+              Nuevo evento
+            </button>
+          </div>
+        </div>
+
+        {(message || error) && (
+          <div className="mb-4 rounded-3xl p-4 text-sm" style={{ background: message ? '#ecfdf5' : '#fef2f2', color: message ? '#166534' : '#991b1b' }}>
+            {message || error}
+          </div>
+        )}
+
+        <div className="grid gap-6 xl:grid-cols-[1.3fr_0.7fr]">
+          <CalendarView events={events} onDateClick={handleDateClick} onEventClick={handleEventClick} />
+          <div className="space-y-4">
+            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <h3 className="text-xl font-semibold text-slate-900">Miembros del grupo</h3>
+              <ul className="mt-4 space-y-3 text-slate-700">
+                {members.length === 0 ? (
+                  <li className="text-sm text-slate-500">No hay miembros aún.</li>
+                ) : (
+                  members.map((member) => (
+                    <li key={member._id} className="rounded-2xl bg-slate-50 p-3">
+                      <p className="font-medium text-slate-900">{member.username}</p>
+                    </li>
+                  ))
+                )}
+              </ul>
+            </div>
+            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <h3 className="text-xl font-semibold text-slate-900">Guía rápida</h3>
+              <ul className="mt-4 space-y-3 text-sm text-slate-600">
+                <li>• Haz clic en la fecha para agregar un evento.</li>
+                <li>• Haz clic en un evento para ver detalles y eliminar si eres creador.</li>
+                <li>• Los eventos se guardan en el grupo y son visibles para todos los miembros.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </main>
+      <EventFormModal open={isEventModalOpen} onClose={() => setEventModalOpen(false)} onSave={handleEventSave} loading={loading} error={eventError} initialData={{ dueDate: selectedDate }} />
+      <EventDetailsModal
+        open={Boolean(selectedEvent)}
+        onClose={() => setSelectedEvent(null)}
+        event={selectedEvent}
+        onDelete={handleEventDelete}
+        canDelete={
+          selectedEvent &&
+          (selectedEvent.createdBy?._id === user?._id || selectedEvent.createdBy === user?._id)
+        }
+        loading={loading}
+        error={error}
+      />
+      <InviteMemberModal open={isInviteOpen} onClose={() => setInviteOpen(false)} onInvite={handleInvite} loading={loading} error={inviteError} />
+    </div>
+  );
+};
+
+export default GroupPage;

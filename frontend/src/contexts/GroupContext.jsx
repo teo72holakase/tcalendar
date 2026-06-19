@@ -1,0 +1,151 @@
+import { createContext, useContext, useState, useEffect } from 'react';
+import { createGroup as apiCreateGroup, fetchGroups, fetchGroupEvents, createGroupEvent, deleteEvent, inviteMember, fetchGroupMembers } from '../services/api';
+
+const GroupContext = createContext();
+
+export const GroupProvider = ({ children }) => {
+  const [groups, setGroups] = useState([]);
+  const [events, setEvents] = useState([]);
+  const [members, setMembers] = useState([]);
+  const [selectedGroup, setSelectedGroup] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+
+  const loadGroups = async () => {
+    setLoading(true);
+    try {
+      const { data } = await fetchGroups();
+      setGroups(data);
+    } catch (err) {
+      setError(err.response?.data?.message || 'No se pudieron cargar los grupos');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadGroups();
+  }, []);
+
+  const createGroup = async (payload) => {
+    setLoading(true);
+    setError('');
+    try {
+      const { data } = await apiCreateGroup(payload);
+      setGroups((prev) => [data, ...prev]);
+      setMessage('Grupo creado correctamente');
+      return data;
+    } catch (err) {
+      setError(err.response?.data?.message || 'No se pudo crear el grupo');
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadEvents = async (groupId) => {
+    setLoading(true);
+    setError('');
+    try {
+      const { data } = await fetchGroupEvents(groupId);
+      setEvents(data);
+      return data;
+    } catch (err) {
+      setError(err.response?.data?.message || 'No se pudieron cargar los eventos');
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const createEvent = async (groupId, payload) => {
+    setLoading(true);
+    setError('');
+    try {
+      const { data } = await createGroupEvent(groupId, payload);
+      setEvents((prev) => [...prev, data]);
+      setMessage('Evento creado correctamente');
+      return data;
+    } catch (err) {
+      setError(err.response?.data?.message || 'No se pudo crear el evento');
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const removeEvent = async (eventId) => {
+    setLoading(true);
+    setError('');
+    try {
+      await deleteEvent(eventId);
+      setEvents((prev) => prev.filter((event) => event._id !== eventId));
+      setMessage('Evento eliminado');
+      return true;
+    } catch (err) {
+      setError(err.response?.data?.message || 'No se pudo eliminar el evento');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const inviteToGroup = async (groupId, payload) => {
+    setLoading(true);
+    setError('');
+    try {
+      const { data } = await inviteMember(groupId, payload);
+      setMessage(data.message || 'Invitación enviada');
+      return true;
+    } catch (err) {
+      setError(err.response?.data?.message || 'No se pudo invitar al miembro');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadMembers = async (groupId) => {
+    setLoading(true);
+    setError('');
+    try {
+      const { data } = await fetchGroupMembers(groupId);
+      setMembers(data);
+      return data;
+    } catch (err) {
+      setError(err.response?.data?.message || 'No se pudieron cargar los miembros');
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <GroupContext.Provider
+      value={{
+        groups,
+        events,
+        members,
+        selectedGroup,
+        loading,
+        message,
+        error,
+        setSelectedGroup,
+        setMessage,
+        setError,
+        loadGroups,
+        createGroup,
+        loadEvents,
+        createEvent,
+        removeEvent,
+        inviteToGroup,
+        loadMembers,
+      }}
+    >
+      {children}
+    </GroupContext.Provider>
+  );
+};
+
+export const useGroup = () => useContext(GroupContext);
