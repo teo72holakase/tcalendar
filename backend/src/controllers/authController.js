@@ -1,88 +1,63 @@
-const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const User = require('../models/User');
 
-// Registrar usuario
-const register = async (req, res) => {
-  try {
-    const { username, email, password } = req.body;
-
-    // Verificar si el usuario ya existe
-    const userExists = await User.findOne({ $or: [{ email }, { username }] });
-    if (userExists) {
-      return res.status(400).json({ message: 'El usuario o email ya existe' });
-    }
-
-    // Encriptar contraseña
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    // Crear usuario
-    const user = new User({
-      username,
-      email,
-      password: hashedPassword
-    });
-
-    await user.save();
-
-    // Generar token JWT
-    const token = jwt.sign(
-      { userId: user._id },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
-
-    res.status(201).json({
-      token,
-      user: {
-        id: user._id,
-        username: user.username,
-        email: user.email
-      }
-    });
-  } catch (error) {
-    console.error('Error en registro:', error);
-    res.status(500).json({ message: 'Error al registrar usuario' });
-  }
+const generateToken = (userId) => {
+  return jwt.sign({ id: userId }, process.env.JWT_SECRET, {
+    expiresIn: '7d',
+  });
 };
 
-// Iniciar sesión
-const login = async (req, res) => {
-  try {
-    const { username, password } = req.body;
+exports.register = async (req, res) => {
+  const { username, password } = req.body;
 
-    // Buscar usuario
-    const user = await User.findOne({ username });
-    if (!user) {
-      return res.status(401).json({ message: 'Credenciales inválidas' });
-    }
-
-    // Verificar contraseña
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(401).json({ message: 'Credenciales inválidas' });
-    }
-
-    // Generar token JWT
-    const token = jwt.sign(
-      { userId: user._id },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
-
-    res.json({
-      token,
-      user: {
-        id: user._id,
-        username: user.username,
-        email: user.email
-      }
-    });
-  } catch (error) {
-    console.error('Error en login:', error);
-    res.status(500).json({ message: 'Error al iniciar sesión' });
+  if (!username || !password) {
+    return res.status(400).json({ message: 'Usuario y contraseña son requeridos' });
   }
+
+  const existingUser = await User.findOne({ username });
+  if (existingUser) {
+    return res.status(400).json({ message: 'El usuario ya existe' });
+  }
+
+  const salt = await bcrypt.genSalt(10);
+  const hashedPassword = await bcrypt.hash(password, salt);
+
+  const user = await User.create({
+    username,
+    password: hashedPassword,
+  });
+
+  res.status(201).json({
+    user: {
+      id: user._id,
+      username: user.username,
+    },
+    token: generateToken(user._id),
+  });
 };
 
-module.exports = { register, login };
+exports.login = async (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) {
+    return res.status(400).json({ message: 'Usuario y contraseña son requeridos' });
+  }
+
+  const user = await User.findOne({ username });
+  if (!user) {
+    return res.status(400).json({ message: 'Credenciales inválidas' });
+  }
+
+  const isMatch = await bcrypt.compare(password, user.password);
+  if (!isMatch) {
+    return res.status(400).json({ message: 'Credenciales inválidas' });
+  }
+
+  res.json({
+    user: {
+      id: user._id,
+      username: user.username,
+    },
+    token: generateToken(user._id),
+  });
+};
