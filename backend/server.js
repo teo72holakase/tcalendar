@@ -15,13 +15,7 @@ const app = express();
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
-  'https://tcalendar-nine.vercel.app',
-  'https://tcalendar-teo72holakases-projects.vercel.app',
-  'https://tcalendar-git-main-teo72holakases-projects.vercel.app',
-  'https://tcalendar-jivh11mgy-teo72holakases-projects.vercel.app',
-  'https://tcalendar-online.vercel.app',
-  'https://tcalendar.vercel.app', // ← NUEVA URL GENÉRICA
-  process.env.CLIENT_URL
+  process.env.CLIENT_URL  // ← SOLO ESTA LÍNEA PARA VERCEL
 ].filter(Boolean);
 
 app.use(cors({
