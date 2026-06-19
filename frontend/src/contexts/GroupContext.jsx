@@ -1,9 +1,11 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { createGroup as apiCreateGroup, fetchGroups, fetchGroupEvents, createGroupEvent, deleteEvent, inviteMember, fetchGroupMembers } from '../services/api';
+import { useAuth } from './AuthContext';
 
 const GroupContext = createContext();
 
 export const GroupProvider = ({ children }) => {
+  const { user } = useAuth();
   const [groups, setGroups] = useState([]);
   const [events, setEvents] = useState([]);
   const [members, setMembers] = useState([]);
@@ -25,8 +27,12 @@ export const GroupProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    loadGroups();
-  }, []);
+    if (user) {
+      loadGroups();
+    } else {
+      setGroups([]);
+    }
+  }, [user]);
 
   const createGroup = async (payload) => {
     setLoading(true);
