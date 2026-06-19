@@ -11,13 +11,13 @@ connectDB();
 
 const app = express();
 
-// 🔥 CORS CONFIGURACIÓN CORRECTA
+// 🔥 CONFIGURACIÓN DE CORS - PERMITE TODAS LAS URLS DE VERCEL
 const allowedOrigins = [
   'http://localhost:3000',
-  'http://localhost:5173',
   'https://tcalendar-nine.vercel.app',
+  'https://tcalendar-teo72holakases-projects.vercel.app',  // ← NUEVA URL
   process.env.CLIENT_URL
-].filter(Boolean); // Elimina undefined
+].filter(Boolean);
 
 app.use(cors({
   origin: function (origin, callback) {
@@ -49,5 +49,6 @@ app.get('/', (req, res) => {
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-  console.log(`CORS permitido para: ${allowedOrigins.join(', ')}`);
+  console.log(`✅ CORS permitido para:`);
+  allowedOrigins.forEach(url => console.log(`   - ${url}`));
 });
