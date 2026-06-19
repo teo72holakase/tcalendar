@@ -11,7 +11,7 @@ connectDB();
 
 const app = express();
 
-// 🔥 CONFIGURACIÓN DE CORS - PERMITE TODAS TUS URLS
+// 🔥 CONFIGURACIÓN DE CORS - PERMITE TODAS LAS URLS DE VERCEL
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
@@ -20,6 +20,7 @@ const allowedOrigins = [
   'https://tcalendar-git-main-teo72holakases-projects.vercel.app',
   'https://tcalendar-jivh11mgy-teo72holakases-projects.vercel.app',
   'https://tcalendar-online.vercel.app',
+  'https://tcalendar.vercel.app', // ← NUEVA URL GENÉRICA
   process.env.CLIENT_URL
 ].filter(Boolean);
 
@@ -42,6 +43,7 @@ app.use(cors({
 
 app.use(express.json());
 
+// Rutas
 app.use('/api/auth', authRoutes);
 app.use('/api/groups', groupRoutes);
 app.use('/api/events', eventRoutes);
