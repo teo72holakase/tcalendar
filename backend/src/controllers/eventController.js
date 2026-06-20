@@ -71,57 +71,6 @@ const createEvent = async (req, res) => {
   }
 };
 
-// GET /events/:id
-const getEvent = async (req, res) => {
-  try {
-    const event = await Event.findById(req.params.id)
-      .populate('createdBy', 'username')
-      .populate('group', 'name members');
-
-    if (!event) return res.status(404).json({ message: 'Evento no encontrado' });
-
-    const isCreator = event.createdBy._id.toString() === req.user._id.toString();
-    const isGroupMember = event.group && event.group.members.some(m => m.toString() === req.user._id.toString());
-
-    if (!isCreator && !isGroupMember) {
-      return res.status(403).json({ message: 'No tenés acceso a este evento' });
-    }
-
-    res.json(event);
-  } catch (error) {
-    console.error('Error getEvent:', error);
-    res.status(500).json({ message: 'Error al obtener evento', error: error.message });
-  }
-};
-
-// PUT /events/:id
-const updateEvent = async (req, res) => {
-  try {
-    const event = await Event.findById(req.params.id);
-    if (!event) return res.status(404).json({ message: 'Evento no encontrado' });
-
-    if (event.createdBy.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: 'Solo el creador puede editar el evento' });
-    }
-
-    const { title, description, topics, assignedBy, dueDate, requestedDate } = req.body;
-    if (title) event.title = title;
-    if (description !== undefined) event.description = description;
-    if (topics !== undefined) event.topics = topics;
-    if (assignedBy !== undefined) event.assignedBy = assignedBy;
-    if (dueDate) event.dueDate = dueDate;
-    if (requestedDate !== undefined) event.requestedDate = requestedDate;
-
-    await event.save();
-    await event.populate('createdBy', 'username');
-
-    res.json(event);
-  } catch (error) {
-    console.error('Error updateEvent:', error);
-    res.status(500).json({ message: 'Error al actualizar evento', error: error.message });
-  }
-};
-
 // DELETE /events/:eventId
 const deleteEvent = async (req, res) => {
   try {
@@ -163,8 +112,6 @@ const getGroupEvents = async (req, res) => {
 module.exports = {
   getEvents,
   createEvent,
-  getEvent,
-  updateEvent,
   deleteEvent,
   getGroupEvents,
 };
