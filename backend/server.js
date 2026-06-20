@@ -11,19 +11,15 @@ connectDB();
 
 const app = express();
 
-// 🔥 CONFIGURACIÓN DE CORS - PERMITE TODAS LAS URLS DE VERCEL
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
-  process.env.CLIENT_URL  // ← SOLO ESTA LÍNEA PARA VERCEL
+  process.env.CLIENT_URL
 ].filter(Boolean);
 
-app.use(cors({
+const corsOptions = {
   origin: function (origin, callback) {
-    // Permitir peticiones sin origen (Postman, etc.)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) !== -1) {
+    if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
       console.log('❌ CORS bloqueó:', origin);
@@ -33,7 +29,11 @@ app.use(cors({
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
-}));
+};
+
+// Manejar preflight antes que cualquier otra ruta
+app.options('*', cors(corsOptions));
+app.use(cors(corsOptions));
 
 app.use(express.json());
 
