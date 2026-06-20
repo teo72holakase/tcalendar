@@ -18,14 +18,9 @@ const EventSchema = new mongoose.Schema({
     type: String,
     trim: true,
   },
-  // FIX: el controller usa 'date', unificamos acá
-  date: {
+  dueDate: {
     type: Date,
     required: true,
-  },
-  time: {
-    type: String,
-    trim: true,
   },
   requestedDate: {
     type: Date,
@@ -35,8 +30,7 @@ const EventSchema = new mongoose.Schema({
     ref: 'Group',
     required: true,
   },
-  // FIX: era createdBy — el controller usa creator
-  creator: {
+  createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true,

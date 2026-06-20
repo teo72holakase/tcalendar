@@ -14,13 +14,13 @@ const getEvents = async (req, res) => {
       if (!isMember) return res.status(403).json({ message: 'No tenés acceso a este grupo' });
       filter.group = groupId;
     } else {
-      filter.creator = req.user._id;
+      filter.createdBy = req.user._id;
     }
 
     const events = await Event.find(filter)
-      .populate('creator', 'username')
+      .populate('createdBy', 'username')
       .populate('group', 'name')
-      .sort({ date: 1 });
+      .sort({ dueDate: 1 });
 
     res.json(events);
   } catch (error) {
@@ -32,10 +32,10 @@ const getEvents = async (req, res) => {
 // POST /events  o  POST /groups/:groupId/events
 const createEvent = async (req, res) => {
   try {
-    const { title, description, topics, assignedBy, date, time, requestedDate } = req.body;
+    const { title, description, topics, assignedBy, dueDate, requestedDate } = req.body;
     const groupId = req.params.groupId || req.body.groupId;
 
-    if (!title || !date) {
+    if (!title || !dueDate) {
       return res.status(400).json({ message: 'El título y la fecha son obligatorios' });
     }
 
@@ -54,15 +54,14 @@ const createEvent = async (req, res) => {
       description,
       topics,
       assignedBy,
-      date,
-      time,
+      dueDate,
       requestedDate,
       group: groupId,
-      creator: req.user._id,
+      createdBy: req.user._id,
     });
 
     await event.save();
-    await event.populate('creator', 'username');
+    await event.populate('createdBy', 'username');
     await event.populate('group', 'name');
 
     res.status(201).json(event);
@@ -76,12 +75,12 @@ const createEvent = async (req, res) => {
 const getEvent = async (req, res) => {
   try {
     const event = await Event.findById(req.params.id)
-      .populate('creator', 'username')
+      .populate('createdBy', 'username')
       .populate('group', 'name members');
 
     if (!event) return res.status(404).json({ message: 'Evento no encontrado' });
 
-    const isCreator = event.creator._id.toString() === req.user._id.toString();
+    const isCreator = event.createdBy._id.toString() === req.user._id.toString();
     const isGroupMember = event.group && event.group.members.some(m => m.toString() === req.user._id.toString());
 
     if (!isCreator && !isGroupMember) {
@@ -101,21 +100,20 @@ const updateEvent = async (req, res) => {
     const event = await Event.findById(req.params.id);
     if (!event) return res.status(404).json({ message: 'Evento no encontrado' });
 
-    if (event.creator.toString() !== req.user._id.toString()) {
+    if (event.createdBy.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: 'Solo el creador puede editar el evento' });
     }
 
-    const { title, description, topics, assignedBy, date, time, requestedDate } = req.body;
+    const { title, description, topics, assignedBy, dueDate, requestedDate } = req.body;
     if (title) event.title = title;
     if (description !== undefined) event.description = description;
     if (topics !== undefined) event.topics = topics;
     if (assignedBy !== undefined) event.assignedBy = assignedBy;
-    if (date) event.date = date;
-    if (time !== undefined) event.time = time;
+    if (dueDate) event.dueDate = dueDate;
     if (requestedDate !== undefined) event.requestedDate = requestedDate;
 
     await event.save();
-    await event.populate('creator', 'username');
+    await event.populate('createdBy', 'username');
 
     res.json(event);
   } catch (error) {
@@ -130,7 +128,7 @@ const deleteEvent = async (req, res) => {
     const event = await Event.findById(req.params.eventId);
     if (!event) return res.status(404).json({ message: 'Evento no encontrado' });
 
-    if (event.creator.toString() !== req.user._id.toString()) {
+    if (event.createdBy.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: 'Solo el creador puede eliminar el evento' });
     }
 
@@ -152,8 +150,8 @@ const getGroupEvents = async (req, res) => {
     if (!isMember) return res.status(403).json({ message: 'No tenés acceso a este grupo' });
 
     const events = await Event.find({ group: req.params.groupId })
-      .populate('creator', 'username')
-      .sort({ date: 1 });
+      .populate('createdBy', 'username')
+      .sort({ dueDate: 1 });
 
     res.json(events);
   } catch (error) {
