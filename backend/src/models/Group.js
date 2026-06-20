@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const crypto = require('crypto');
 
 const GroupSchema = new mongoose.Schema({
   name: {
@@ -9,17 +10,20 @@ const GroupSchema = new mongoose.Schema({
   description: {
     type: String,
     trim: true,
+    default: '',
   },
-  createdBy: {
+  // FIX: era createdBy — el controller usa creator
+  creator: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true,
   },
   members: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  // FIX: era required:true sin default — crasheaba si no se pasaba
   inviteCode: {
     type: String,
-    required: true,
     unique: true,
+    default: () => crypto.randomBytes(4).toString('hex').toUpperCase(),
   },
   createdAt: {
     type: Date,
