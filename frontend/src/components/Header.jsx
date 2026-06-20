@@ -1,11 +1,11 @@
-import { LogOut, Moon, Sun } from 'lucide-react';
+import { LogOut, Moon, Sun, Sparkles, Square } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useNavigate } from 'react-router-dom';
 
 const Header = ({ title }) => {
   const { user, logout } = useAuth();
-  const { isDark, toggleTheme } = useTheme();
+  const { isDark, toggleTheme, isAnimatedBg, toggleBg } = useTheme();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -14,12 +14,19 @@ const Header = ({ title }) => {
   };
 
   return (
-    <header className="flex flex-col gap-4 bg-white px-6 py-5 shadow-sm dark:bg-slate-900 sm:flex-row sm:items-center sm:justify-between">
+    <header className="relative z-10 flex flex-col gap-4 bg-white/80 px-6 py-5 shadow-sm backdrop-blur-sm dark:bg-slate-900/80 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <p className="text-sm uppercase tracking-[0.3em] text-brand-500">TCALENDAR</p>
         <h1 className="text-2xl font-semibold text-slate-900 dark:text-white">{title}</h1>
       </div>
       <div className="flex items-center gap-3">
+        <button
+          onClick={toggleBg}
+          className="rounded-2xl border border-slate-300 bg-slate-50 p-2 text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+          title={isAnimatedBg ? 'Fondo simple' : 'Fondo animado'}
+        >
+          {isAnimatedBg ? <Square size={20} /> : <Sparkles size={20} />}
+        </button>
         <button
           onClick={toggleTheme}
           className="rounded-2xl border border-slate-300 bg-slate-50 p-2 text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"

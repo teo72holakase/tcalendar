@@ -8,19 +8,21 @@ export const ThemeProvider = ({ children }) => {
     return saved ? saved === 'dark' : false;
   });
 
+  const [isAnimatedBg, setIsAnimatedBg] = useState(true);
+
   useEffect(() => {
-    if (isDark) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('tcalendar_theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('tcalendar_theme', 'light');
-    }
+    document.documentElement.classList.toggle('dark', isDark);
+    localStorage.setItem('tcalendar_theme', isDark ? 'dark' : 'light');
   }, [isDark]);
 
-  const toggleTheme = () => setIsDark(!isDark);
+  const toggleTheme = () => setIsDark(v => !v);
+  const toggleBg    = () => setIsAnimatedBg(v => !v);
 
-  return <ThemeContext.Provider value={{ isDark, toggleTheme }}>{children}</ThemeContext.Provider>;
+  return (
+    <ThemeContext.Provider value={{ isDark, toggleTheme, isAnimatedBg, toggleBg }}>
+      {children}
+    </ThemeContext.Provider>
+  );
 };
 
 export const useTheme = () => useContext(ThemeContext);

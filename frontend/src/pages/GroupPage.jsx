@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useGroup } from '../contexts/GroupContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { ArrowLeft } from 'lucide-react';
 import Header from '../components/Header';
 import CalendarView from '../components/CalendarView';
@@ -13,6 +14,7 @@ const GroupPage = () => {
   const { groupId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { isAnimatedBg } = useTheme();
   const {
     groups,
     events,
@@ -42,7 +44,6 @@ const GroupPage = () => {
     loadMembers(groupId);
   }, [groupId]);
 
-  // El grupo actual (para saber si el usuario es creador)
   const currentGroup = groups.find((g) => g._id === groupId);
   const isGroupCreator =
     currentGroup &&
@@ -95,7 +96,7 @@ const GroupPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
+    <div className={`min-h-screen ${isAnimatedBg ? '' : 'bg-slate-50 dark:bg-slate-900'}`}>
       <Header title="Calendario del grupo" />
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

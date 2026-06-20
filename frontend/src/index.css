@@ -7,7 +7,8 @@ html {
 }
 
 body {
-  @apply bg-slate-50 text-slate-900;
+  @apply text-slate-900;
+  background: transparent;
 }
 
 button {
@@ -29,35 +30,38 @@ input, textarea {
   border-color: #334155;
 }
 
-.dark .fc .fc-daygrid-day-number,
+.dark .fc .fc-daygrid-day-number {
+  color: #e2e8f0 !important;
+}
+
 .dark .fc .fc-col-header-cell-cushion {
-  color: #e2e8f0;
+  color: #94a3b8 !important;
 }
 
 .dark .fc .fc-day-other .fc-daygrid-day-number {
-  color: #64748b;
+  color: #475569 !important;
 }
 
 .dark .fc .fc-daygrid-day.fc-day-today {
-  background-color: #1e3a5f;
+  background-color: rgba(47, 79, 230, 0.18);
 }
 
-.dark .fc-toolbar-title {
-  color: #f1f5f9;
+.dark .fc .fc-toolbar-title {
+  color: #f1f5f9 !important;
 }
 
 .dark .fc .fc-button {
-  background-color: #1e293b;
-  border-color: #475569;
-  color: #e2e8f0;
+  background-color: #1e293b !important;
+  border-color: #475569 !important;
+  color: #e2e8f0 !important;
 }
 
 .dark .fc .fc-button:hover {
-  background-color: #334155;
+  background-color: #334155 !important;
 }
 
 .dark .fc .fc-button-primary:not(:disabled).fc-button-active,
 .dark .fc .fc-button-primary:not(:disabled):active {
-  background-color: #2f4fe6;
-  border-color: #2f4fe6;
+  background-color: #2f4fe6 !important;
+  border-color: #2f4fe6 !important;
 }
