@@ -21,3 +21,43 @@ input, textarea {
 .modal-backdrop {
   background: rgba(15, 23, 42, 0.6);
 }
+
+/* FullCalendar — dark mode fixes */
+.dark .fc-theme-standard td,
+.dark .fc-theme-standard th,
+.dark .fc-theme-standard .fc-scrollgrid {
+  border-color: #334155;
+}
+
+.dark .fc .fc-daygrid-day-number,
+.dark .fc .fc-col-header-cell-cushion {
+  color: #e2e8f0;
+}
+
+.dark .fc .fc-day-other .fc-daygrid-day-number {
+  color: #64748b;
+}
+
+.dark .fc .fc-daygrid-day.fc-day-today {
+  background-color: #1e3a5f;
+}
+
+.dark .fc-toolbar-title {
+  color: #f1f5f9;
+}
+
+.dark .fc .fc-button {
+  background-color: #1e293b;
+  border-color: #475569;
+  color: #e2e8f0;
+}
+
+.dark .fc .fc-button:hover {
+  background-color: #334155;
+}
+
+.dark .fc .fc-button-primary:not(:disabled).fc-button-active,
+.dark .fc .fc-button-primary:not(:disabled):active {
+  background-color: #2f4fe6;
+  border-color: #2f4fe6;
+}

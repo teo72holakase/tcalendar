@@ -66,9 +66,29 @@ const inviteMember = async (req, res) => {
   }
 };
 
+const removeMember = async (req, res) => {
+  try {
+    const group = await Group.findById(req.params.groupId);
+    if (!group) return res.status(404).json({ message: 'Grupo no encontrado' });
+    if (group.creator.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Solo el creador puede remover miembros' });
+    }
+    if (req.params.memberId === req.user._id.toString()) {
+      return res.status(400).json({ message: 'El creador no puede removerse a sí mismo' });
+    }
+    group.members = group.members.filter(m => m.toString() !== req.params.memberId);
+    await group.save();
+    res.json({ message: 'Miembro removido' });
+  } catch (error) {
+    console.error('Error removeMember:', error);
+    res.status(500).json({ message: 'Error al remover miembro', error: error.message });
+  }
+};
+
 module.exports = {
   getGroups,
   createGroup,
   inviteMember,
   getGroupMembers,
+  removeMember,
 };

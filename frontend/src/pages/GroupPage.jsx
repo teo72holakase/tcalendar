@@ -14,6 +14,7 @@ const GroupPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const {
+    groups,
     events,
     members,
     loadEvents,
@@ -21,6 +22,7 @@ const GroupPage = () => {
     removeEvent,
     inviteToGroup,
     loadMembers,
+    removeMember,
     loading,
     error,
     message,
@@ -39,6 +41,14 @@ const GroupPage = () => {
     loadEvents(groupId);
     loadMembers(groupId);
   }, [groupId]);
+
+  // El grupo actual (para saber si el usuario es creador)
+  const currentGroup = groups.find((g) => g._id === groupId);
+  const isGroupCreator =
+    currentGroup &&
+    (currentGroup.creator === user?._id ||
+      currentGroup.creator?._id === user?._id ||
+      currentGroup.creator?.toString() === user?._id);
 
   const handleDateClick = (dateStr) => {
     setSelectedDate(dateStr);
@@ -79,6 +89,11 @@ const GroupPage = () => {
     }
   };
 
+  const handleRemoveMember = async (memberId) => {
+    await removeMember(groupId, memberId);
+    loadMembers(groupId);
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
       <Header title="Calendario del grupo" />
@@ -97,9 +112,11 @@ const GroupPage = () => {
             <p className="mt-1 text-slate-600 dark:text-slate-400">Haz clic en una fecha para crear un evento o selecciona uno existente.</p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <button onClick={() => setInviteOpen(true)} className="rounded-2xl bg-brand-600 px-4 py-2 text-white hover:bg-brand-700">
-              Invitar miembro
-            </button>
+            {isGroupCreator && (
+              <button onClick={() => setInviteOpen(true)} className="rounded-2xl bg-brand-600 px-4 py-2 text-white hover:bg-brand-700">
+                Invitar miembro
+              </button>
+            )}
             <button onClick={() => setEventModalOpen(true)} className="rounded-2xl border border-slate-300 bg-white px-4 py-2 text-slate-900 hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700">
               Nuevo evento
             </button>
@@ -122,8 +139,17 @@ const GroupPage = () => {
                   <li className="text-sm text-slate-500 dark:text-slate-400">No hay miembros aún.</li>
                 ) : (
                   members.map((member) => (
-                    <li key={member._id} className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-700">
+                    <li key={member._id} className="flex items-center justify-between rounded-2xl bg-slate-50 p-3 dark:bg-slate-700">
                       <p className="font-medium text-slate-900 dark:text-white">{member.username}</p>
+                      {isGroupCreator && member._id !== user?._id && (
+                        <button
+                          onClick={() => handleRemoveMember(member._id)}
+                          disabled={loading}
+                          className="ml-2 rounded-xl bg-rose-100 px-3 py-1 text-xs font-medium text-rose-700 hover:bg-rose-200 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-rose-900 dark:text-rose-300 dark:hover:bg-rose-800"
+                        >
+                          Remover
+                        </button>
+                      )}
                     </li>
                   ))
                 )}
@@ -147,8 +173,11 @@ const GroupPage = () => {
         event={selectedEvent}
         onDelete={handleEventDelete}
         canDelete={
-          selectedEvent &&
-          (selectedEvent.createdBy?._id === user?._id || selectedEvent.createdBy === user?._id)
+          selectedEvent && (
+            isGroupCreator ||
+            selectedEvent.createdBy?._id === user?._id ||
+            selectedEvent.createdBy === user?._id
+          )
         }
         loading={loading}
         error={error}

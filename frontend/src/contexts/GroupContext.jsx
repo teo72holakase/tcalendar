@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { createGroup as apiCreateGroup, fetchGroups, fetchGroupEvents, createGroupEvent, deleteEvent, inviteMember, fetchGroupMembers } from '../services/api';
+import { createGroup as apiCreateGroup, fetchGroups, fetchGroupEvents, createGroupEvent, deleteEvent, inviteMember, fetchGroupMembers, removeMember as apiRemoveMember } from '../services/api';
 import { useAuth } from './AuthContext';
 
 const GroupContext = createContext();
@@ -127,6 +127,22 @@ export const GroupProvider = ({ children }) => {
     }
   };
 
+  const removeMember = async (groupId, memberId) => {
+    setLoading(true);
+    setError('');
+    try {
+      await apiRemoveMember(groupId, memberId);
+      setMembers((prev) => prev.filter((m) => m._id !== memberId));
+      setMessage('Miembro removido');
+      return true;
+    } catch (err) {
+      setError(err.response?.data?.message || 'No se pudo remover al miembro');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <GroupContext.Provider
       value={{
@@ -147,6 +163,7 @@ export const GroupProvider = ({ children }) => {
         removeEvent,
         inviteToGroup,
         loadMembers,
+        removeMember,
       }}
     >
       {children}

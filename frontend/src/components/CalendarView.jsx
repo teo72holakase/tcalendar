@@ -1,6 +1,5 @@
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
-import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import esLocale from '@fullcalendar/core/locales/es';
 
@@ -16,10 +15,10 @@ const CalendarView = ({ events, onDateClick, onEventClick }) => {
   return (
     <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-600 dark:bg-slate-800">
       <FullCalendar
-        plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+        plugins={[dayGridPlugin, interactionPlugin]}
         initialView="dayGridMonth"
         locale={esLocale}
-        headerToolbar={{ left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek' }}
+        headerToolbar={{ left: 'prev,next today', center: 'title', right: '' }}
         events={calendarEvents}
         eventClick={(info) => onEventClick(info.event.extendedProps)}
         dateClick={(info) => onDateClick(info.dateStr)}
