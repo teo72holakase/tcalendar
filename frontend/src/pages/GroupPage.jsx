@@ -9,12 +9,13 @@ import CalendarView from '../components/CalendarView';
 import EventFormModal from '../components/EventFormModal';
 import EventDetailsModal from '../components/EventDetailsModal';
 import InviteMemberModal from '../components/InviteMemberModal';
+import AnimatedBackground from '../components/AnimatedBackground'; // ← IMPORTAR
 
 const GroupPage = () => {
   const { groupId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { isAnimatedBg } = useTheme();
+  const { isAnimatedBg, isDark } = useTheme(); // ← AGREGAR isDark
   const {
     groups,
     events,
@@ -96,9 +97,19 @@ const GroupPage = () => {
   };
 
   return (
-    <div className={`min-h-screen ${isAnimatedBg ? '' : 'bg-slate-50 dark:bg-slate-900'}`}>
+    <div className="min-h-screen">
+      {/* 🌟 FONDO: Animado o Sólido */}
+      {isAnimatedBg ? (
+        <AnimatedBackground darkMode={isDark} /> // ← PASAR isDark
+      ) : (
+        <div className={`fixed top-0 left-0 w-full h-full -z-10 ${
+          isDark ? 'bg-slate-900' : 'bg-slate-50'
+        }`} />
+      )}
+
       <Header title="Calendario del grupo" />
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+      
+      <main className="relative z-10 mx-auto max-w-7xl px-4 py-8 sm:px-6">
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="flex items-center gap-2">
@@ -167,7 +178,16 @@ const GroupPage = () => {
           </div>
         </div>
       </main>
-      <EventFormModal open={isEventModalOpen} onClose={() => setEventModalOpen(false)} onSave={handleEventSave} loading={loading} error={eventError} initialData={{ dueDate: selectedDate }} />
+      
+      <EventFormModal 
+        open={isEventModalOpen} 
+        onClose={() => setEventModalOpen(false)} 
+        onSave={handleEventSave} 
+        loading={loading} 
+        error={eventError} 
+        initialData={{ dueDate: selectedDate }} 
+      />
+      
       <EventDetailsModal
         open={Boolean(selectedEvent)}
         onClose={() => setSelectedEvent(null)}
@@ -183,7 +203,14 @@ const GroupPage = () => {
         loading={loading}
         error={error}
       />
-      <InviteMemberModal open={isInviteOpen} onClose={() => setInviteOpen(false)} onInvite={handleInvite} loading={loading} error={inviteError} />
+      
+      <InviteMemberModal 
+        open={isInviteOpen} 
+        onClose={() => setInviteOpen(false)} 
+        onInvite={handleInvite} 
+        loading={loading} 
+        error={inviteError} 
+      />
     </div>
   );
 };

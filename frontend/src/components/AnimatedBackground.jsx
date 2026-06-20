@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 
-const AnimatedBackground = () => {
+const AnimatedBackground = ({ darkMode }) => {
   const canvasRef = useRef(null);
 
   useEffect(() => {
@@ -33,15 +33,21 @@ const AnimatedBackground = () => {
       }
     };
 
-    const isDarkNow = () => document.documentElement.classList.contains('dark');
-
     const draw = () => {
+      // ✅ PRIMERO: PINTAR EL FONDO DEL CANVAS
+      const dark = darkMode;
+      const bgColor = dark ? '#0f172a' : '#f8fafc'; // slate-900 o slate-50
+      
+      // Limpiar y pintar fondo
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = bgColor;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      const dark = isDarkNow();
+      // Colores de partículas según tema
       const dot  = dark ? 'rgba(99,144,255,'  : 'rgba(47,90,200,';
       const line = dark ? 'rgba(99,144,255,'  : 'rgba(47,90,200,';
 
+      // Mover partículas
       for (const p of points) {
         p.x += p.vx;
         p.y += p.vy;
@@ -49,6 +55,7 @@ const AnimatedBackground = () => {
         if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
       }
 
+      // Dibujar líneas
       for (let i = 0; i < points.length; i++) {
         for (let j = i + 1; j < points.length; j++) {
           const dx = points[i].x - points[j].x;
@@ -66,6 +73,7 @@ const AnimatedBackground = () => {
         }
       }
 
+      // Dibujar puntos
       for (const p of points) {
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
@@ -87,7 +95,7 @@ const AnimatedBackground = () => {
       cancelAnimationFrame(animFrameId);
       window.removeEventListener('resize', onResize);
     };
-  }, []);
+  }, [darkMode]);
 
   return (
     <canvas
@@ -98,7 +106,7 @@ const AnimatedBackground = () => {
         left: 0,
         width: '100%',
         height: '100%',
-        zIndex: -1,
+        zIndex: 0, // ← Cambiar a 0 (no -1)
         pointerEvents: 'none',
         display: 'block',
       }}
