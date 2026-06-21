@@ -6,7 +6,7 @@ import axios from 'axios';
 const InvitePage = () => {
   const { token } = useParams();
   const navigate = useNavigate();
-  const { user, token: authToken } = useAuth();
+  const { user } = useAuth(); // ← QUITAR authToken de aquí
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [inviteData, setInviteData] = useState(null);
@@ -18,9 +18,9 @@ const InvitePage = () => {
           `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/invites/validate/${token}`
         );
         setInviteData(response.data);
+        setLoading(false);
       } catch (err) {
         setError(err.response?.data?.message || 'Invitación no válida');
-      } finally {
         setLoading(false);
       }
     };
@@ -36,16 +36,24 @@ const InvitePage = () => {
 
     try {
       setLoading(true);
+      
+      // ✅ OBTENER TOKEN DIRECTAMENTE DE LOCALSTORAGE
+      const authToken = localStorage.getItem('tcalendar_token');
+      console.log('🔑 Token enviado al unirse:', authToken);
+      
       const response = await axios.post(
         `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/invites/join/${token}`,
         {},
         {
-          headers: { Authorization: `Bearer ${authToken}` },
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+          },
         }
       );
 
       navigate(`/group/${response.data.group._id}`);
     } catch (err) {
+      console.error('❌ Error al unirse:', err.response?.data);
       setError(err.response?.data?.message || 'Error al unirse al grupo');
       setLoading(false);
     }
