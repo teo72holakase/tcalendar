@@ -47,7 +47,6 @@ const getEvents = async (req, res) => {
 
 const createEvent = async (req, res) => {
   try {
-    // ✅ AGREGAR color
     const { title, description, topics, assignedBy, dueDate, requestedDate, color } = req.body;
     const groupId = req.params.groupId || req.body.groupId;
 
@@ -65,7 +64,6 @@ const createEvent = async (req, res) => {
     const isMember = group.members.some(m => m.toString() === req.user._id.toString());
     if (!isMember) return res.status(403).json({ message: 'No tenés acceso a este grupo' });
 
-    // ✅ FORZAR UTC
     const parsedDueDate = parseDate(dueDate);
     const parsedRequestedDate = requestedDate ? parseDate(requestedDate) : null;
 
@@ -76,7 +74,7 @@ const createEvent = async (req, res) => {
       assignedBy,
       dueDate: parsedDueDate,
       requestedDate: parsedRequestedDate,
-      color: color || '#A2CFFE', // ✅ AGREGAR ESTO
+      color: color || '#A2CFFE',
       group: groupId,
       createdBy: req.user._id,
     });
@@ -128,7 +126,7 @@ const getGroupEvents = async (req, res) => {
   }
 };
 
-// ✅ ACTUALIZAR COLOR DE UN EVENTO
+// ✅ ACTUALIZAR COLOR - PERMITE AL CREADOR DEL GRUPO
 const updateEventColor = async (req, res) => {
   try {
     const { eventId } = req.params;
@@ -139,8 +137,19 @@ const updateEventColor = async (req, res) => {
       return res.status(404).json({ message: 'Evento no encontrado' });
     }
 
-    if (event.createdBy.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: 'Solo el creador puede cambiar el color' });
+    // ✅ Verificar si el usuario es el creador del evento O el creador del grupo
+    const group = await Group.findById(event.group);
+    if (!group) {
+      return res.status(404).json({ message: 'Grupo no encontrado' });
+    }
+
+    const isEventCreator = event.createdBy.toString() === req.user._id.toString();
+    const isGroupCreator = group.creator.toString() === req.user._id.toString();
+
+    if (!isEventCreator && !isGroupCreator) {
+      return res.status(403).json({ 
+        message: 'Solo el creador del evento o del grupo puede cambiar el color' 
+      });
     }
 
     event.color = color;
@@ -158,5 +167,5 @@ module.exports = {
   createEvent,
   deleteEvent,
   getGroupEvents,
-  updateEventColor, // ✅ EXPORTAR NUEVA FUNCIÓN
+  updateEventColor,
 };
