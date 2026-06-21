@@ -97,4 +97,39 @@ const removeMember = async (req, res) => {
   }
 };
 
-module.exports = { getGroups, createGroup, deleteGroup, inviteMember, getGroupMembers, removeMember };
+// ========== NUEVA FUNCIÓN PARA ACTUALIZAR COLOR ==========
+const updateGroupColor = async (req, res) => {
+  try {
+    const { groupId } = req.params;
+    const { color } = req.body;
+
+    const group = await Group.findById(groupId);
+    if (!group) {
+      return res.status(404).json({ message: 'Grupo no encontrado' });
+    }
+
+    // Solo el creador puede cambiar el color
+    if (group.creator.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Solo el creador puede cambiar el color' });
+    }
+
+    // Si no se envía color, usar azul por defecto
+    group.color = color || '#3B82F6';
+    await group.save();
+
+    res.json({ message: 'Color actualizado', color: group.color });
+  } catch (error) {
+    console.error('Error updateGroupColor:', error);
+    res.status(500).json({ message: 'Error al actualizar color', error: error.message });
+  }
+};
+
+module.exports = {
+  getGroups,
+  createGroup,
+  deleteGroup,
+  inviteMember,
+  getGroupMembers,
+  removeMember,
+  updateGroupColor // ← EXPORTADA
+};
