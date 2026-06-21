@@ -9,13 +9,14 @@ import CalendarView from '../components/CalendarView';
 import EventFormModal from '../components/EventFormModal';
 import EventDetailsModal from '../components/EventDetailsModal';
 import InviteMemberModal from '../components/InviteMemberModal';
-import AnimatedBackground from '../components/AnimatedBackground'; // ← IMPORTAR
+import AnimatedBackground from '../components/AnimatedBackground';
+import CreateInviteModal from '../components/CreateInviteModal'; // ← NUEVO
 
 const GroupPage = () => {
   const { groupId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { isAnimatedBg, isDark } = useTheme(); // ← AGREGAR isDark
+  const { isAnimatedBg, isDark } = useTheme();
   const {
     groups,
     events,
@@ -35,6 +36,7 @@ const GroupPage = () => {
 
   const [isEventModalOpen, setEventModalOpen] = useState(false);
   const [isInviteOpen, setInviteOpen] = useState(false);
+  const [isInviteLinkModalOpen, setInviteLinkModalOpen] = useState(false); // ← NUEVO
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [selectedDate, setSelectedDate] = useState('');
   const [eventError, setEventError] = useState('');
@@ -98,9 +100,8 @@ const GroupPage = () => {
 
   return (
     <div className="min-h-screen">
-      {/* 🌟 FONDO: Animado o Sólido */}
       {isAnimatedBg ? (
-        <AnimatedBackground darkMode={isDark} /> // ← PASAR isDark
+        <AnimatedBackground darkMode={isDark} />
       ) : (
         <div className={`fixed top-0 left-0 w-full h-full -z-10 ${
           isDark ? 'bg-slate-900' : 'bg-slate-50'
@@ -129,6 +130,12 @@ const GroupPage = () => {
                 Invitar miembro
               </button>
             )}
+            <button 
+              onClick={() => setInviteLinkModalOpen(true)} // ← NUEVO
+              className="rounded-2xl border border-slate-300 bg-white px-4 py-2 text-slate-900 hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700"
+            >
+              🔗 Enlace
+            </button>
             <button onClick={() => setEventModalOpen(true)} className="rounded-2xl border border-slate-300 bg-white px-4 py-2 text-slate-900 hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700">
               Nuevo evento
             </button>
@@ -210,6 +217,13 @@ const GroupPage = () => {
         onInvite={handleInvite} 
         loading={loading} 
         error={inviteError} 
+      />
+
+      {/* MODAL DE ENLACE DE INVITACIÓN */}
+      <CreateInviteModal
+        groupId={groupId}
+        open={isInviteLinkModalOpen}
+        onClose={() => setInviteLinkModalOpen(false)}
       />
     </div>
   );

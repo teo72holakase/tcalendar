@@ -7,6 +7,8 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import GroupPage from './pages/GroupPage';
+// ✅ AGREGAR ESTA LÍNEA
+import InvitePage from './pages/InvitePage';
 
 function ProtectedRoute({ children }) {
   const { user } = useAuth();
@@ -27,6 +29,8 @@ function AppShell() {
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          {/* ✅ AGREGAR ESTA RUTA (pública, no requiere autenticación) */}
+          <Route path="/invite/:token" element={<InvitePage />} />
           <Route
             path="/dashboard"
             element={

@@ -5,6 +5,8 @@ const connectDB = require('./src/config/db');
 const authRoutes = require('./src/routes/authRoutes');
 const groupRoutes = require('./src/routes/groupRoutes');
 const eventRoutes = require('./src/routes/eventRoutes');
+// ✅ AGREGAR ESTA LÍNEA
+const inviteRoutes = require('./src/routes/inviteRoutes');
 
 dotenv.config();
 connectDB();
@@ -31,16 +33,16 @@ const corsOptions = {
   allowedHeaders: ['Content-Type', 'Authorization']
 };
 
-// Manejar preflight antes que cualquier otra ruta
 app.options('*', cors(corsOptions));
 app.use(cors(corsOptions));
-
 app.use(express.json());
 
 // Rutas
 app.use('/auth', authRoutes);
 app.use('/groups', groupRoutes);
 app.use('/events', eventRoutes);
+// ✅ AGREGAR ESTA LÍNEA
+app.use('/invites', inviteRoutes);
 
 app.get('/', (req, res) => {
   res.json({ message: 'TCalendar API is running' });
