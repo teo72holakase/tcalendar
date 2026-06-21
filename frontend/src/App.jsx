@@ -3,7 +3,6 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { GroupProvider } from './contexts/GroupContext';
 import AnimatedBackground from './components/AnimatedBackground';
-import Favicon from './components/Favicon';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
@@ -23,10 +22,6 @@ function AppShell() {
       className="min-h-screen text-slate-900 dark:text-white"
       style={{ background: isAnimatedBg ? 'transparent' : undefined }}
     >
-      {/* ✅ Favicon (se renderiza en todas las páginas) */}
-      <Favicon />
-      
-      {/* ✅ Fondo animado (recibe darkMode para cambiar colores) */}
       {isAnimatedBg && <AnimatedBackground darkMode={isDark} />}
       
       <div style={{ position: 'relative', zIndex: 1 }}>
