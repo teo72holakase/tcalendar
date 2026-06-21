@@ -3,11 +3,11 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { GroupProvider } from './contexts/GroupContext';
 import AnimatedBackground from './components/AnimatedBackground';
+import Favicon from './components/Favicon'; // ← IMPORTAR
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import GroupPage from './pages/GroupPage';
-// ✅ AGREGAR ESTA LÍNEA
 import InvitePage from './pages/InvitePage';
 
 function ProtectedRoute({ children }) {
@@ -23,13 +23,16 @@ function AppShell() {
       className="min-h-screen text-slate-900 dark:text-white"
       style={{ background: isAnimatedBg ? 'transparent' : undefined }}
     >
-      {isAnimatedBg && <AnimatedBackground />}
+      {/* ✅ AGREGAR FAVICON AQUÍ (se renderiza en todas las páginas) */}
+      <Favicon />
+      
+      {isAnimatedBg && <AnimatedBackground darkMode={isDark} />}
+      
       <div style={{ position: 'relative', zIndex: 1 }}>
         <Routes>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          {/* ✅ AGREGAR ESTA RUTA (pública, no requiere autenticación) */}
           <Route path="/invite/:token" element={<InvitePage />} />
           <Route
             path="/dashboard"
