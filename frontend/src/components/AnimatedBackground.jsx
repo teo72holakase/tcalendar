@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 
-const AnimatedBackground = ({ darkMode }) => {
+const AnimatedBackground = () => {
   const canvasRef = useRef(null);
 
   useEffect(() => {
@@ -9,7 +9,6 @@ const AnimatedBackground = ({ darkMode }) => {
 
     const ctx = canvas.getContext('2d');
     let animFrameId;
-
     const POINT_COUNT = 70;
     const MAX_DIST = 160;
     const SPEED = 0.4;
@@ -34,20 +33,16 @@ const AnimatedBackground = ({ darkMode }) => {
     };
 
     const draw = () => {
-      // ✅ PRIMERO: PINTAR EL FONDO DEL CANVAS
-      const dark = darkMode;
-      const bgColor = dark ? '#0f172a' : '#f8fafc'; // slate-900 o slate-50
-      
-      // Limpiar y pintar fondo
+      // Lee el DOM directamente — nunca desactualizado
+      const dark = document.documentElement.classList.contains('dark');
+
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = bgColor;
+      ctx.fillStyle = dark ? '#0f172a' : '#f8fafc';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Colores de partículas según tema
-      const dot  = dark ? 'rgba(99,144,255,'  : 'rgba(47,90,200,';
-      const line = dark ? 'rgba(99,144,255,'  : 'rgba(47,90,200,';
+      const dotColor  = dark ? 'rgba(99,144,255,' : 'rgba(47,90,200,';
+      const lineColor = dark ? 'rgba(99,144,255,' : 'rgba(47,90,200,';
 
-      // Mover partículas
       for (const p of points) {
         p.x += p.vx;
         p.y += p.vy;
@@ -55,7 +50,6 @@ const AnimatedBackground = ({ darkMode }) => {
         if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
       }
 
-      // Dibujar líneas
       for (let i = 0; i < points.length; i++) {
         for (let j = i + 1; j < points.length; j++) {
           const dx = points[i].x - points[j].x;
@@ -66,18 +60,17 @@ const AnimatedBackground = ({ darkMode }) => {
             ctx.beginPath();
             ctx.moveTo(points[i].x, points[i].y);
             ctx.lineTo(points[j].x, points[j].y);
-            ctx.strokeStyle = line + alpha + ')';
+            ctx.strokeStyle = lineColor + alpha + ')';
             ctx.lineWidth = 0.8;
             ctx.stroke();
           }
         }
       }
 
-      // Dibujar puntos
       for (const p of points) {
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fillStyle = dot + '0.75)';
+        ctx.fillStyle = dotColor + '0.75)';
         ctx.fill();
       }
 
@@ -85,7 +78,6 @@ const AnimatedBackground = ({ darkMode }) => {
     };
 
     const onResize = () => { resize(); init(); };
-
     resize();
     init();
     draw();
@@ -95,18 +87,16 @@ const AnimatedBackground = ({ darkMode }) => {
       cancelAnimationFrame(animFrameId);
       window.removeEventListener('resize', onResize);
     };
-  }, [darkMode]);
+  }, []);
 
   return (
     <canvas
       ref={canvasRef}
       style={{
         position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        zIndex: 0, // ← Cambiar a 0 (no -1)
+        top: 0, left: 0,
+        width: '100%', height: '100%',
+        zIndex: 0,
         pointerEvents: 'none',
         display: 'block',
       }}

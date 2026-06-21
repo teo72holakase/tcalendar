@@ -18,37 +18,22 @@ function AppShell() {
   const { isAnimatedBg, isDark } = useTheme();
 
   return (
-    <div
-      className="min-h-screen text-slate-900 dark:text-white"
-      style={{ background: isAnimatedBg ? 'transparent' : undefined }}
-    >
-      {isAnimatedBg && <AnimatedBackground darkMode={isDark} />}
-      
+    <>
+      {isAnimatedBg
+        ? <AnimatedBackground />
+        : <div className={`fixed inset-0 -z-10 ${isDark ? 'bg-slate-900' : 'bg-slate-50'}`} />
+      }
       <div style={{ position: 'relative', zIndex: 1 }}>
         <Routes>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/invite/:token" element={<InvitePage />} />
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/group/:groupId"
-            element={
-              <ProtectedRoute>
-                <GroupPage />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/group/:groupId" element={<ProtectedRoute><GroupPage /></ProtectedRoute>} />
         </Routes>
       </div>
-    </div>
+    </>
   );
 }
 

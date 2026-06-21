@@ -14,11 +14,24 @@ const Header = ({ title }) => {
   };
 
   return (
-    <header className="relative z-10 flex flex-col gap-4 bg-white/80 px-6 py-5 shadow-sm backdrop-blur-sm dark:bg-slate-900/80 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <p className="text-sm uppercase tracking-[0.3em] text-brand-500">TCALENDAR</p>
-        <h1 className="text-2xl font-semibold text-slate-900 dark:text-white">{title}</h1>
+    <header className="relative z-10 flex flex-col gap-4 bg-white/80 px-6 py-4 shadow-sm backdrop-blur-sm dark:bg-slate-900/80 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex items-center gap-3">
+        <img
+          src="/tcalendar.png"
+          alt="TCalendar logo"
+          className="h-10 w-10 object-contain"
+        />
+        <div>
+          <p
+            className="text-lg font-black uppercase tracking-widest text-brand-600 dark:text-brand-400"
+            style={{ fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif", letterSpacing: '0.18em' }}
+          >
+            TCALENDAR
+          </p>
+          <h1 className="text-sm font-medium text-slate-500 dark:text-slate-400">{title}</h1>
+        </div>
       </div>
+
       <div className="flex items-center gap-3">
         <button
           onClick={toggleBg}
@@ -34,11 +47,9 @@ const Header = ({ title }) => {
         >
           {isDark ? <Sun size={20} /> : <Moon size={20} />}
         </button>
-        <div className="rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-600 dark:bg-slate-800">
-          <div>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Conectado como</p>
-            <p className="font-medium text-slate-900 dark:text-white">{user?.username}</p>
-          </div>
+        <div className="rounded-3xl border border-slate-200 bg-slate-50 px-4 py-2 dark:border-slate-600 dark:bg-slate-800">
+          <p className="text-xs text-slate-500 dark:text-slate-400">Conectado como</p>
+          <p className="font-medium text-slate-900 dark:text-white">{user?.username}</p>
         </div>
         <button
           onClick={handleLogout}
