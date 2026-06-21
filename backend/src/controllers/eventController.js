@@ -126,27 +126,47 @@ const getGroupEvents = async (req, res) => {
   }
 };
 
-// ✅ ACTUALIZAR COLOR - PERMITE AL CREADOR DEL GRUPO
+// ✅ ACTUALIZAR COLOR - CON LOGS PARA DEPURAR
 const updateEventColor = async (req, res) => {
   try {
+    console.log('📡 Petición de color recibida');
+    console.log('👤 Usuario ID:', req.user._id);
+    
     const { eventId } = req.params;
     const { color } = req.body;
 
+    console.log('📦 Evento ID:', eventId);
+    console.log('🎨 Nuevo color:', color);
+
     const event = await Event.findById(eventId);
     if (!event) {
+      console.log('❌ Evento no encontrado');
       return res.status(404).json({ message: 'Evento no encontrado' });
     }
 
-    // ✅ Verificar si el usuario es el creador del evento O el creador del grupo
+    console.log('📦 Evento encontrado:');
+    console.log('   - Título:', event.title);
+    console.log('   - Creador:', event.createdBy);
+    console.log('   - Grupo:', event.group);
+
     const group = await Group.findById(event.group);
     if (!group) {
+      console.log('❌ Grupo no encontrado');
       return res.status(404).json({ message: 'Grupo no encontrado' });
     }
+
+    console.log('📦 Grupo encontrado:');
+    console.log('   - Nombre:', group.name);
+    console.log('   - Creador:', group.creator);
 
     const isEventCreator = event.createdBy.toString() === req.user._id.toString();
     const isGroupCreator = group.creator.toString() === req.user._id.toString();
 
+    console.log('✅ ¿Es creador del evento?', isEventCreator);
+    console.log('✅ ¿Es creador del grupo?', isGroupCreator);
+
     if (!isEventCreator && !isGroupCreator) {
+      console.log('❌ Usuario no autorizado');
       return res.status(403).json({ 
         message: 'Solo el creador del evento o del grupo puede cambiar el color' 
       });
@@ -155,9 +175,10 @@ const updateEventColor = async (req, res) => {
     event.color = color;
     await event.save();
 
+    console.log('✅ Color actualizado a:', color);
     res.json({ message: 'Color actualizado', event });
   } catch (error) {
-    console.error('Error updateEventColor:', error);
+    console.error('❌ Error updateEventColor:', error);
     res.status(500).json({ message: 'Error al actualizar color', error: error.message });
   }
 };
