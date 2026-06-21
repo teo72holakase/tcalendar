@@ -6,7 +6,7 @@ import axios from 'axios';
 const InvitePage = () => {
   const { token } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth(); // ← QUITAR authToken de aquí
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [inviteData, setInviteData] = useState(null);
@@ -36,8 +36,6 @@ const InvitePage = () => {
 
     try {
       setLoading(true);
-      
-      // ✅ OBTENER TOKEN DIRECTAMENTE DE LOCALSTORAGE
       const authToken = localStorage.getItem('tcalendar_token');
       console.log('🔑 Token enviado al unirse:', authToken);
       
@@ -73,7 +71,7 @@ const InvitePage = () => {
         <div className="max-w-md text-center">
           <div className="mb-4 text-6xl">🔗</div>
           <h1 className="mb-2 text-2xl font-bold text-red-600">Invitación no válida</h1>
-          <p className="text-slate-600 dark:text-slate-400">{error}</p>
+          <p className="text-slate-600">{error}</p>
           <button
             onClick={() => navigate('/dashboard')}
             className="mt-4 rounded-xl bg-brand-600 px-6 py-2 text-white hover:bg-brand-700"
@@ -89,18 +87,24 @@ const InvitePage = () => {
     <div className="flex min-h-screen items-center justify-center px-4">
       <div className="max-w-md text-center">
         <div className="mb-4 text-6xl">📅</div>
-        <h1 className="mb-2 text-2xl font-bold text-slate-900 dark:text-white">
+        {/* ✅ Título en negro (sin dark mode) */}
+        <h1 className="mb-2 text-2xl font-bold text-black">
           Invitación a {inviteData?.group?.name}
         </h1>
-        <p className="mb-4 text-slate-600 dark:text-slate-400">
+        <p className="mb-4 text-slate-600">
           {user ? (
             `Haz clic en "Unirse" para formar parte del grupo`
           ) : (
             `Inicia sesión para unirte al grupo`
           )}
         </p>
-        <div className="rounded-lg bg-slate-100 p-4 text-sm dark:bg-slate-800">
-          <p>👤 Creado por: {inviteData?.createdBy?.username}</p>
+        <div className="rounded-lg bg-slate-100 p-4 text-sm">
+          <p className="text-slate-700">👤 Creado por: {inviteData?.createdBy?.username}</p>
+          {inviteData?.expiresAt && (
+            <p className="mt-1 text-slate-500">
+              ⏰ Expira: {new Date(inviteData.expiresAt).toLocaleDateString()}
+            </p>
+          )}
         </div>
         <button
           onClick={handleJoin}
