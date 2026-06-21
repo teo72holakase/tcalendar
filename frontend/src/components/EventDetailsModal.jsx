@@ -26,6 +26,7 @@ const EventDetailsModal = ({ open, onClose, event, onDelete, canDelete, loading,
   const [selectedColor, setSelectedColor] = useState(event?.color || '#A2CFFE');
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [updatingColor, setUpdatingColor] = useState(false);
+  const [colorError, setColorError] = useState(''); // ✅ NUEVO
 
   if (!open || !event) return null;
 
@@ -40,20 +41,51 @@ const EventDetailsModal = ({ open, onClose, event, onDelete, canDelete, loading,
     });
   };
 
-  // ✅ Manejar cambio de color
+  // ✅ Manejar cambio de color con mensajes amigables
   const handleColorChange = async (newColor) => {
+    // ✅ Si no tiene permisos, mostrar mensaje y salir
+    if (!canDelete) {
+      setColorError('⚠️ No tienes permiso para cambiar el color de este evento');
+      setTimeout(() => setColorError(''), 3000);
+      return;
+    }
+
     setSelectedColor(newColor);
     setUpdatingColor(true);
+    setColorError('');
+    
     try {
       await updateEventColor(event._id, newColor);
-      // ✅ Recargar para mostrar el nuevo color
       window.location.reload();
     } catch (error) {
       console.error('Error al actualizar color:', error);
-      alert('Error al actualizar el color');
+      
+      // ✅ Mensajes amigables según el tipo de error
+      if (error.response?.status === 403) {
+        setColorError('⚠️ No tienes permiso para cambiar el color de este evento');
+      } else if (error.response?.status === 401) {
+        setColorError('🔑 Tu sesión ha expirado. Inicia sesión nuevamente.');
+      } else if (error.response?.status === 404) {
+        setColorError('📅 El evento ya no existe.');
+      } else {
+        setColorError('❌ Error al actualizar el color. Intenta nuevamente.');
+      }
+      
+      setTimeout(() => setColorError(''), 4000);
     } finally {
       setUpdatingColor(false);
     }
+  };
+
+  // ✅ Manejar clic en "Cambiar color" sin permisos
+  const handleToggleColorPicker = () => {
+    if (!canDelete) {
+      setColorError('⚠️ Solo el creador del evento o del grupo puede cambiar el color');
+      setTimeout(() => setColorError(''), 3000);
+      return;
+    }
+    setShowColorPicker(!showColorPicker);
+    setColorError('');
   };
 
   const currentColor = event.color || selectedColor;
@@ -115,48 +147,62 @@ const EventDetailsModal = ({ open, onClose, event, onDelete, canDelete, loading,
           </p>
         </div>
 
-        {/* SELECTOR DE COLOR */}
-        {canDelete && (
-          <div className="mb-4 rounded-xl bg-slate-50 p-4 dark:bg-slate-700">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Color del evento</p>
-              <button
-                onClick={() => setShowColorPicker(!showColorPicker)}
-                className="rounded-lg px-3 py-1 text-sm hover:bg-slate-200 dark:hover:bg-slate-600"
-                disabled={updatingColor}
-              >
-                {updatingColor ? 'Guardando...' : showColorPicker ? 'Ocultar colores' : 'Cambiar color'}
-              </button>
-            </div>
+        {/* SELECTOR DE COLOR - SIEMPRE VISIBLE PERO CON MENSAJE SI NO TIENE PERMISOS */}
+        <div className="mb-4 rounded-xl bg-slate-50 p-4 dark:bg-slate-700">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Color del evento</p>
+            <button
+              onClick={handleToggleColorPicker}
+              className={`rounded-lg px-3 py-1 text-sm hover:bg-slate-200 dark:hover:bg-slate-600 ${
+                !canDelete ? 'opacity-60 cursor-not-allowed' : ''
+              }`}
+              disabled={updatingColor}
+            >
+              {updatingColor ? 'Guardando...' : showColorPicker ? 'Ocultar colores' : 'Cambiar color'}
+            </button>
+          </div>
 
-            <div className="mt-2 flex items-center gap-2">
-              <span className="text-sm text-slate-500 dark:text-slate-400">Color actual:</span>
-              <div
-                className="h-6 w-6 rounded-full border"
-                style={{ backgroundColor: currentColor }}
-              />
-            </div>
-
-            {showColorPicker && (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {PASTEL_COLORS.map((c) => (
-                  <button
-                    key={c.hex}
-                    type="button"
-                    title={c.name}
-                    onClick={() => handleColorChange(c.hex)}
-                    style={{ backgroundColor: c.hex }}
-                    disabled={updatingColor}
-                    className={`h-8 w-8 rounded-full transition-transform hover:scale-110 ${
-                      selectedColor === c.hex ? 'ring-2 ring-offset-2 ring-slate-500 scale-110' : ''
-                    } ${updatingColor ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  />
-                ))}
-              </div>
+          <div className="mt-2 flex items-center gap-2">
+            <span className="text-sm text-slate-500 dark:text-slate-400">Color actual:</span>
+            <div
+              className="h-6 w-6 rounded-full border"
+              style={{ backgroundColor: currentColor }}
+            />
+            {!canDelete && (
+              <span className="text-xs text-slate-400 dark:text-slate-500">
+                (solo creadores)
+              </span>
             )}
           </div>
-        )}
 
+          {/* ✅ MENSAJE DE ERROR AMIGABLE */}
+          {colorError && (
+            <div className="mt-2 rounded-lg bg-amber-50 p-2 text-sm text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+              {colorError}
+            </div>
+          )}
+
+          {/* Selector de colores - Solo si tiene permisos */}
+          {showColorPicker && canDelete && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {PASTEL_COLORS.map((c) => (
+                <button
+                  key={c.hex}
+                  type="button"
+                  title={c.name}
+                  onClick={() => handleColorChange(c.hex)}
+                  style={{ backgroundColor: c.hex }}
+                  disabled={updatingColor}
+                  className={`h-8 w-8 rounded-full transition-transform hover:scale-110 ${
+                    selectedColor === c.hex ? 'ring-2 ring-offset-2 ring-slate-500 scale-110' : ''
+                  } ${updatingColor ? 'opacity-50 cursor-not-allowed' : ''}`}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ERROR GENERAL */}
         {error && (
           <div className="mb-4 rounded-xl bg-rose-100 p-3 text-sm text-rose-700 dark:bg-rose-900 dark:text-rose-200">
             {error}
