@@ -3,22 +3,30 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import esLocale from '@fullcalendar/core/locales/es';
 
+const getTextColor = (hex) => {
+  if (!hex) return '#1e293b';
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.5 ? '#1e293b' : '#f8fafc';
+};
+
 const CalendarView = ({ events, onDateClick, onEventClick }) => {
   const calendarEvents = events.map((event) => {
-    // ✅ FORZAR FECHA SIN ZONA HORARIA
     let startDate = event.dueDate;
-    
-    // Si la fecha es string, asegurar que sea ISO con mediodía
     if (typeof startDate === 'string' && startDate.length === 10) {
       startDate = `${startDate}T12:00:00.000Z`;
     }
-    
+    const bg = event.color || '#A2CFFE';
     return {
       id: event._id,
       title: event.title,
       start: startDate,
-      // ✅ FORZAR ALLDAY
       allDay: true,
+      backgroundColor: bg,
+      borderColor: bg,
+      textColor: getTextColor(bg),
       extendedProps: event,
     };
   });
@@ -34,10 +42,8 @@ const CalendarView = ({ events, onDateClick, onEventClick }) => {
         eventClick={(info) => onEventClick(info.event.extendedProps)}
         dateClick={(info) => onDateClick(info.dateStr)}
         height="auto"
-        // ✅ CONFIGURACIONES PARA IGNORAR ZONA HORARIA
         timeZone="UTC"
         displayEventTime={false}
-        allDayText="Todo el día"
       />
     </div>
   );

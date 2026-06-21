@@ -1,5 +1,6 @@
 const Group = require('../models/Group');
 const User = require('../models/User');
+const Event = require('../models/Event');
 
 const getGroups = async (req, res) => {
   try {
@@ -14,18 +15,29 @@ const getGroups = async (req, res) => {
 const createGroup = async (req, res) => {
   try {
     const { name, description } = req.body;
-    const group = new Group({
-      name,
-      description,
-      creator: req.user._id,
-      members: [req.user._id],
-    });
+    const group = new Group({ name, description, creator: req.user._id, members: [req.user._id] });
     await group.save();
     await group.populate('members', 'username');
     res.status(201).json(group);
   } catch (error) {
     console.error('Error createGroup:', error);
     res.status(500).json({ message: 'Error al crear grupo', error: error.message });
+  }
+};
+
+const deleteGroup = async (req, res) => {
+  try {
+    const group = await Group.findById(req.params.groupId);
+    if (!group) return res.status(404).json({ message: 'Grupo no encontrado' });
+    if (group.creator.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Solo el creador puede borrar el grupo' });
+    }
+    await Event.deleteMany({ group: req.params.groupId });
+    await Group.findByIdAndDelete(req.params.groupId);
+    res.json({ message: 'Grupo eliminado' });
+  } catch (error) {
+    console.error('Error deleteGroup:', error);
+    res.status(500).json({ message: 'Error al eliminar grupo', error: error.message });
   }
 };
 
@@ -85,10 +97,4 @@ const removeMember = async (req, res) => {
   }
 };
 
-module.exports = {
-  getGroups,
-  createGroup,
-  inviteMember,
-  getGroupMembers,
-  removeMember,
-};
+module.exports = { getGroups, createGroup, deleteGroup, inviteMember, getGroupMembers, removeMember };

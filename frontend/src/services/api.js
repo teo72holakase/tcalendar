@@ -23,15 +23,17 @@ api.interceptors.response.use(
   }
 );
 
-export const registerUser        = (payload)            => api.post('/auth/register', payload);
-export const loginUser           = (payload)            => api.post('/auth/login', payload);
-export const fetchGroups         = ()                   => api.get('/groups');
-export const createGroup         = (payload)            => api.post('/groups', payload);
-export const inviteMember        = (groupId, payload)   => api.post(`/groups/${groupId}/invite`, payload);
-export const removeMember        = (groupId, memberId)  => api.delete(`/groups/${groupId}/members/${memberId}`);
-export const fetchGroupEvents    = (groupId)            => api.get(`/groups/${groupId}/events`);
-export const createGroupEvent    = (groupId, payload)   => api.post(`/groups/${groupId}/events`, payload);
-export const deleteEvent         = (eventId)            => api.delete(`/events/${eventId}`);
-export const fetchGroupMembers   = (groupId)            => api.get(`/groups/${groupId}/members`);
+export const registerUser      = (payload)           => api.post('/auth/register', payload);
+export const loginUser         = (payload)           => api.post('/auth/login', payload);
+export const fetchGroups       = ()                  => api.get('/groups');
+export const createGroup       = (payload)           => api.post('/groups', payload);
+export const deleteGroup       = (groupId)           => api.delete(`/groups/${groupId}`);
+export const inviteMember      = (groupId, payload)  => api.post(`/groups/${groupId}/invite`, payload);
+export const removeMember      = (groupId, memberId) => api.delete(`/groups/${groupId}/members/${memberId}`);
+export const fetchGroupEvents  = (groupId)           => api.get(`/groups/${groupId}/events`);
+export const createGroupEvent  = (groupId, payload)  => api.post(`/groups/${groupId}/events`, payload);
+export const deleteEvent       = (eventId)           => api.delete(`/events/${eventId}`);
+export const fetchGroupMembers = (groupId)           => api.get(`/groups/${groupId}/members`);
+export const updateEventColor  = (eventId, color)    => api.patch(`/events/${eventId}/color`, { color }); // ✅ NUEVO
 
 export default api;

@@ -5,14 +5,14 @@ const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [initialized, setInitialized] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
     const storedUser = localStorage.getItem('tcalendar_user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
+    if (storedUser) setUser(JSON.parse(storedUser));
+    setInitialized(true); // listo — ahora sí sabemos si hay sesión o no
   }, []);
 
   const saveUser = (userData, token) => {
@@ -28,8 +28,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const login = async (values) => {
-    setLoading(true);
-    setError('');
+    setLoading(true); setError('');
     try {
       const { data } = await loginUser(values);
       saveUser(data.user, data.token);
@@ -37,14 +36,11 @@ export const AuthProvider = ({ children }) => {
     } catch (err) {
       setError(err.response?.data?.message || 'Error al iniciar sesión');
       return false;
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
   const register = async (values) => {
-    setLoading(true);
-    setError('');
+    setLoading(true); setError('');
     try {
       const { data } = await registerUser(values);
       saveUser(data.user, data.token);
@@ -52,13 +48,11 @@ export const AuthProvider = ({ children }) => {
     } catch (err) {
       setError(err.response?.data?.message || 'Error al registrar usuario');
       return false;
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, error, login, register, logout, setError }}>
+    <AuthContext.Provider value={{ user, initialized, loading, error, login, register, logout, setError }}>
       {children}
     </AuthContext.Provider>
   );

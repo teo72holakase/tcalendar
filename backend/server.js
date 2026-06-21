@@ -5,7 +5,6 @@ const connectDB = require('./src/config/db');
 const authRoutes = require('./src/routes/authRoutes');
 const groupRoutes = require('./src/routes/groupRoutes');
 const eventRoutes = require('./src/routes/eventRoutes');
-// ✅ AGREGAR ESTA LÍNEA
 const inviteRoutes = require('./src/routes/inviteRoutes');
 
 dotenv.config();
@@ -29,7 +28,7 @@ const corsOptions = {
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'], // ✅ AGREGADO 'PATCH'
   allowedHeaders: ['Content-Type', 'Authorization']
 };
 
@@ -37,11 +36,9 @@ app.options('*', cors(corsOptions));
 app.use(cors(corsOptions));
 app.use(express.json());
 
-// Rutas
 app.use('/auth', authRoutes);
 app.use('/groups', groupRoutes);
 app.use('/events', eventRoutes);
-// ✅ AGREGAR ESTA LÍNEA
 app.use('/invites', inviteRoutes);
 
 app.get('/', (req, res) => {

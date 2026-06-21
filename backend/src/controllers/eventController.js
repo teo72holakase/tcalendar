@@ -47,7 +47,8 @@ const getEvents = async (req, res) => {
 
 const createEvent = async (req, res) => {
   try {
-    const { title, description, topics, assignedBy, dueDate, requestedDate } = req.body;
+    // ✅ AGREGAR color
+    const { title, description, topics, assignedBy, dueDate, requestedDate, color } = req.body;
     const groupId = req.params.groupId || req.body.groupId;
 
     if (!title || !dueDate) {
@@ -75,6 +76,7 @@ const createEvent = async (req, res) => {
       assignedBy,
       dueDate: parsedDueDate,
       requestedDate: parsedRequestedDate,
+      color: color || '#A2CFFE', // ✅ AGREGAR ESTO
       group: groupId,
       createdBy: req.user._id,
     });
@@ -126,9 +128,35 @@ const getGroupEvents = async (req, res) => {
   }
 };
 
+// ✅ ACTUALIZAR COLOR DE UN EVENTO
+const updateEventColor = async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const { color } = req.body;
+
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return res.status(404).json({ message: 'Evento no encontrado' });
+    }
+
+    if (event.createdBy.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Solo el creador puede cambiar el color' });
+    }
+
+    event.color = color;
+    await event.save();
+
+    res.json({ message: 'Color actualizado', event });
+  } catch (error) {
+    console.error('Error updateEventColor:', error);
+    res.status(500).json({ message: 'Error al actualizar color', error: error.message });
+  }
+};
+
 module.exports = {
   getEvents,
   createEvent,
   deleteEvent,
   getGroupEvents,
+  updateEventColor, // ✅ EXPORTAR NUEVA FUNCIÓN
 };

@@ -10,7 +10,9 @@ import GroupPage from './pages/GroupPage';
 import InvitePage from './pages/InvitePage';
 
 function ProtectedRoute({ children }) {
-  const { user } = useAuth();
+  const { user, initialized } = useAuth();
+  // Esperar a que se lea el localStorage antes de decidir
+  if (!initialized) return null;
   return user ? children : <Navigate to="/login" replace />;
 }
 
