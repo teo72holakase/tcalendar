@@ -2,11 +2,13 @@ import { LogOut, Moon, Sun, Sparkles, Square } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useNavigate } from 'react-router-dom';
+import { useState } from 'react'; // ✅ AGREGAR
 
 const Header = ({ title }) => {
   const { user, logout } = useAuth();
   const { isDark, toggleTheme, isAnimatedBg, toggleBg } = useTheme();
   const navigate = useNavigate();
+  const [logoError, setLogoError] = useState(false); // ✅ NUEVO
 
   const handleLogout = () => {
     logout();
@@ -16,11 +18,20 @@ const Header = ({ title }) => {
   return (
     <header className="relative z-10 flex flex-col gap-4 bg-white/80 px-6 py-4 shadow-sm backdrop-blur-sm dark:bg-slate-900/80 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center gap-3">
-        <img
-          src="/tcalendar.png"
-          alt="TCalendar logo"
-          className="h-10 w-10 object-contain"
-        />
+        {/* ✅ LOGO CON FALLBACK */}
+        {!logoError ? (
+          <img
+            src="/tcalendar.png"
+            alt="TCalendar logo"
+            className="h-10 w-10 object-contain"
+            onError={() => setLogoError(true)} // ✅ SI FALLA, USA FALLBACK
+          />
+        ) : (
+          // ✅ FALLBACK: icono de calendario si no carga la imagen
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-100 text-2xl dark:bg-brand-900/30">
+            📅
+          </div>
+        )}
         <div>
           <p
             className="text-lg font-black uppercase tracking-widest text-brand-600 dark:text-brand-400"
