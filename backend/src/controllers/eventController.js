@@ -1,7 +1,23 @@
 const Event = require('../models/Event');
 const Group = require('../models/Group');
 
-// GET /events
+// ✅ FORZAR FECHA EN UTC
+const parseDate = (dateStr) => {
+  if (!dateStr) return null;
+  
+  // Si es "2026-06-24" (string de 10 caracteres)
+  if (typeof dateStr === 'string' && dateStr.length === 10) {
+    return new Date(`${dateStr}T12:00:00.000Z`);
+  }
+  
+  // Si es ISO, forzar UTC
+  if (typeof dateStr === 'string') {
+    return new Date(dateStr);
+  }
+  
+  return new Date(dateStr);
+};
+
 const getEvents = async (req, res) => {
   try {
     const { groupId } = req.query;
@@ -29,7 +45,6 @@ const getEvents = async (req, res) => {
   }
 };
 
-// POST /events  o  POST /groups/:groupId/events
 const createEvent = async (req, res) => {
   try {
     const { title, description, topics, assignedBy, dueDate, requestedDate } = req.body;
@@ -49,13 +64,17 @@ const createEvent = async (req, res) => {
     const isMember = group.members.some(m => m.toString() === req.user._id.toString());
     if (!isMember) return res.status(403).json({ message: 'No tenés acceso a este grupo' });
 
+    // ✅ FORZAR UTC
+    const parsedDueDate = parseDate(dueDate);
+    const parsedRequestedDate = requestedDate ? parseDate(requestedDate) : null;
+
     const event = new Event({
       title,
       description,
       topics,
       assignedBy,
-      dueDate,
-      requestedDate,
+      dueDate: parsedDueDate,
+      requestedDate: parsedRequestedDate,
       group: groupId,
       createdBy: req.user._id,
     });
@@ -71,7 +90,6 @@ const createEvent = async (req, res) => {
   }
 };
 
-// DELETE /events/:eventId
 const deleteEvent = async (req, res) => {
   try {
     const event = await Event.findById(req.params.eventId);
@@ -89,7 +107,6 @@ const deleteEvent = async (req, res) => {
   }
 };
 
-// GET /groups/:groupId/events
 const getGroupEvents = async (req, res) => {
   try {
     const group = await Group.findById(req.params.groupId);

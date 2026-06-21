@@ -30,7 +30,20 @@ const EventFormModal = ({ open, onClose, onSave, loading, error, initialData }) 
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSave(form);
+    
+    // ✅ FORZAR FECHA CON MEDIODÍA EN UTC
+    const dateStr = form.dueDate; // "2026-06-24"
+    
+    // Crear fecha a las 12:00 UTC para evitar desplazamiento
+    const adjustedDate = new Date(`${dateStr}T12:00:00.000Z`);
+    
+    // Enviar como ISO string
+    const eventData = {
+      ...form,
+      dueDate: adjustedDate.toISOString(), // "2026-06-24T12:00:00.000Z"
+    };
+
+    onSave(eventData);
   };
 
   if (!open) return null;
