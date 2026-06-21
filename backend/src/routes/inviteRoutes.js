@@ -3,18 +3,17 @@ const {
   createInvite,
   validateInvite,
   joinGroup,
-  getGroupInvites,
-  deleteInvite,
 } = require('../controllers/inviteController');
 const authMiddleware = require('../middleware/authMiddleware');
 const router = express.Router();
 
-router.use(authMiddleware);
+// ✅ Crear invitación (requiere autenticación)
+router.post('/', authMiddleware, createInvite);
 
-router.post('/', createInvite);
-router.get('/validate/:token', validateInvite);
-router.post('/join/:token', joinGroup);
-router.get('/group/:groupId', getGroupInvites);
-router.delete('/:inviteId', deleteInvite);
+// ✅ Validar invitación (NO requiere autenticación - pública)
+router.get('/validate/:token', validateInvite); // ← SIN authMiddleware
+
+// ✅ Unirse al grupo (requiere autenticación)
+router.post('/join/:token', authMiddleware, joinGroup);
 
 module.exports = router;

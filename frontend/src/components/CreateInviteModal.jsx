@@ -12,15 +12,20 @@ const CreateInviteModal = ({ groupId, open, onClose, onInviteCreated }) => {
   const handleCreate = async () => {
     try {
       setLoading(true);
+      
+      // ✅ CAMBIADO: usar tcalendar_token
+      const token = localStorage.getItem('tcalendar_token');
+      
       const response = await axios.post(
         `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/invites`,
         { groupId },
         {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
+            Authorization: `Bearer ${token}`,
           },
         }
       );
+      
       setInviteLink(response.data.inviteLink);
       if (onInviteCreated) onInviteCreated(response.data.invite);
     } catch (error) {

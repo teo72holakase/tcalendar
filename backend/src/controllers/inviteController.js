@@ -4,7 +4,7 @@ const crypto = require('crypto');
 
 const generateToken = () => crypto.randomBytes(8).toString('hex');
 
-// 📌 CREAR INVITACIÓN
+// 📌 CREAR INVITACIÓN (SOLO PARA USUARIOS AUTENTICADOS)
 const createInvite = async (req, res) => {
   try {
     const { groupId } = req.body;
@@ -41,25 +41,25 @@ const createInvite = async (req, res) => {
   }
 };
 
-// 📌 VALIDAR INVITACIÓN
+// 📌 VALIDAR INVITACIÓN (NO REQUIERE AUTENTICACIÓN)
 const validateInvite = async (req, res) => {
   try {
     const { token } = req.params;
+    console.log('🔍 Validando token:', token);
 
-    // ✅ UNA SOLA CONSULTA
     const invite = await Invite.findOne({ token })
-      .select('group createdBy')
       .populate('group', 'name')
-      .populate('createdBy', 'username')
-      .lean();
+      .populate('createdBy', 'username');
 
     if (!invite) {
-      return res.status(404).json({ 
-        valid: false, 
-        message: 'Invitación no válida' 
+      console.log('❌ Token no encontrado');
+      return res.status(404).json({
+        valid: false,
+        message: 'Invitación no válida'
       });
     }
 
+    console.log('✅ Invitación válida:', invite);
     res.json({
       valid: true,
       group: invite.group,
@@ -71,32 +71,32 @@ const validateInvite = async (req, res) => {
   }
 };
 
-// 📌 UNIRSE AL GRUPO
+// 📌 UNIRSE AL GRUPO (REQUIERE AUTENTICACIÓN)
 const joinGroup = async (req, res) => {
   try {
     const { token } = req.params;
+    console.log('🔑 Uniendo usuario:', req.user._id, 'con token:', token);
 
-    // ✅ CONSULTA Y VALIDACIÓN SIMPLE
     const invite = await Invite.findOne({ token });
     if (!invite) {
       return res.status(404).json({ message: 'Invitación no válida' });
     }
 
-    // ✅ VERIFICAR SI YA ES MIEMBRO
     const group = await Group.findById(invite.group);
     if (!group) {
       return res.status(404).json({ message: 'Grupo no encontrado' });
     }
 
+    // ✅ Verificar si el usuario ya es miembro
     if (group.members.includes(req.user._id)) {
       return res.status(400).json({ message: 'Ya eres miembro de este grupo' });
     }
 
-    // ✅ AGREGAR AL GRUPO (SIN TRANSACCIONES COMPLEJAS)
+    // ✅ Agregar usuario al grupo
     group.members.push(req.user._id);
     await group.save();
 
-    // ✅ OPCIONAL: ELIMINAR INVITACIÓN DESPUÉS DE USARSE
+    // ✅ Eliminar invitación después de usarla
     await Invite.findByIdAndDelete(invite._id);
 
     res.json({
