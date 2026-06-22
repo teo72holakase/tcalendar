@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import AuthForm from '../components/AuthForm';
+import ThemeToggle from '../components/ThemeToggle';
 import { useAuth } from '../contexts/AuthContext';
 
 const Login = () => {
@@ -8,9 +9,7 @@ const Login = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (user) {
-      navigate('/dashboard');
-    }
+    if (user) navigate('/dashboard');
   }, [user, navigate]);
 
   useEffect(() => {
@@ -19,32 +18,31 @@ const Login = () => {
 
   const handleLogin = async (values) => {
     const success = await login(values);
-    if (success) {
-      navigate('/dashboard');
-    }
+    if (success) navigate('/dashboard');
   };
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-10">
+      <ThemeToggle />
       <div className="w-full max-w-2xl">
-        <div className="text-center mb-8">
-          {/* ✅ Título en negro (sin dark mode) */}
-          <h1 className="text-4xl font-bold text-black">
+        <div className="mb-8 text-center">
+          <img src="/tcalendar.png" alt="TCalendar" className="mx-auto mb-4 h-14 w-14 object-contain" />
+          <h1 className="text-4xl font-bold text-slate-900 dark:text-white">
             Iniciar sesión
           </h1>
-          <p className="mt-2 text-slate-600">
+          <p className="mt-2 text-slate-600 dark:text-slate-400">
             Ingresa tus credenciales para acceder a tu cuenta
           </p>
         </div>
-        <AuthForm 
-          title="Iniciar sesión" 
-          submitLabel="Entrar" 
-          onSubmit={handleLogin} 
-          error={error} 
-          loading={loading} 
-          fields={['username', 'password']} 
+        <AuthForm
+          title="Iniciar sesión"
+          submitLabel="Entrar"
+          onSubmit={handleLogin}
+          error={error}
+          loading={loading}
+          fields={['username', 'password']}
         />
-        <p className="mt-4 text-center text-sm text-slate-600">
+        <p className="mt-4 text-center text-sm text-slate-600 dark:text-slate-400">
           ¿No tienes cuenta?{' '}
           <Link to="/register" className="font-semibold text-brand-600 hover:text-brand-700">
             Regístrate

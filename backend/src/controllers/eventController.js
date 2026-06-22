@@ -4,17 +4,12 @@ const Group = require('../models/Group');
 // ✅ FORZAR FECHA EN UTC
 const parseDate = (dateStr) => {
   if (!dateStr) return null;
-  
-  // Si es "2026-06-24" (string de 10 caracteres)
   if (typeof dateStr === 'string' && dateStr.length === 10) {
     return new Date(`${dateStr}T12:00:00.000Z`);
   }
-  
-  // Si es ISO, forzar UTC
   if (typeof dateStr === 'string') {
     return new Date(dateStr);
   }
-  
   return new Date(dateStr);
 };
 
@@ -92,11 +87,14 @@ const createEvent = async (req, res) => {
 
 const deleteEvent = async (req, res) => {
   try {
-    const event = await Event.findById(req.params.eventId);
+    const event = await Event.findById(req.params.eventId).populate('group', 'creator');
     if (!event) return res.status(404).json({ message: 'Evento no encontrado' });
 
-    if (event.createdBy.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: 'Solo el creador puede eliminar el evento' });
+    const isEventCreator = event.createdBy.toString() === req.user._id.toString();
+    const isGroupCreator = event.group?.creator?.toString() === req.user._id.toString();
+
+    if (!isEventCreator && !isGroupCreator) {
+      return res.status(403).json({ message: 'No tenés permiso para eliminar este evento' });
     }
 
     await event.deleteOne();
@@ -131,7 +129,7 @@ const updateEventColor = async (req, res) => {
   try {
     console.log('📡 Petición de color recibida');
     console.log('👤 Usuario ID:', req.user._id);
-    
+
     const { eventId } = req.params;
     const { color } = req.body;
 
@@ -167,8 +165,8 @@ const updateEventColor = async (req, res) => {
 
     if (!isEventCreator && !isGroupCreator) {
       console.log('❌ Usuario no autorizado');
-      return res.status(403).json({ 
-        message: 'Solo el creador del evento o del grupo puede cambiar el color' 
+      return res.status(403).json({
+        message: 'Solo el creador del evento o del grupo puede cambiar el color'
       });
     }
 

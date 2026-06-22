@@ -18,6 +18,18 @@ const InviteSchema = new mongoose.Schema({
     ref: 'User',
     required: true,
   },
+  expiresAt: {
+    type: Date,
+    default: null, // null = ilimitado
+  },
+  maxUses: {
+    type: Number,
+    default: 1,
+  },
+  uses: {
+    type: Number,
+    default: 0,
+  },
   createdAt: {
     type: Date,
     default: Date.now,
@@ -28,7 +40,6 @@ const InviteSchema = new mongoose.Schema({
   minimize: true,
 });
 
-// ✅ Solo un índice compuesto para búsquedas rápidas
 InviteSchema.index({ group: 1, token: 1 });
 
 module.exports = mongoose.model('Invite', InviteSchema);
