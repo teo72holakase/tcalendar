@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useNavigate } from 'react-router-dom';
 import { LOGO_BASE64 } from '../logo';
+import NotificationBell from './NotificationBell';
 
 const Header = ({ title }) => {
   const { user, logout } = useAuth();
@@ -24,6 +25,7 @@ const Header = ({ title }) => {
         </div>
       </div>
       <div className="flex items-center gap-3">
+        <NotificationBell />
         <button onClick={toggleBg} className="rounded-2xl border border-slate-300 bg-slate-50 p-2 text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700" title={isAnimatedBg ? 'Fondo simple' : 'Fondo animado'}>
           {isAnimatedBg ? <Square size={20} /> : <Sparkles size={20} />}
         </button>
