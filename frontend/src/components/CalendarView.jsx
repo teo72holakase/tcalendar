@@ -12,7 +12,7 @@ const getTextColor = (hex) => {
   return luminance > 0.5 ? '#1e293b' : '#f8fafc';
 };
 
-const CalendarView = ({ events, onDateClick, onEventClick }) => {
+const CalendarView = ({ events, onDateClick, onEventClick, groupName }) => { // ← AÑADE groupName
   const calendarEvents = events.map((event) => {
     let startDate = event.dueDate;
     if (typeof startDate === 'string' && startDate.length === 10) {
@@ -33,6 +33,7 @@ const CalendarView = ({ events, onDateClick, onEventClick }) => {
 
   return (
     <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-600 dark:bg-slate-800">
+
       <FullCalendar
         plugins={[dayGridPlugin, interactionPlugin]}
         initialView="dayGridMonth"

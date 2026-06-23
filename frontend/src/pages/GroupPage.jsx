@@ -75,6 +75,9 @@ const GroupPage = () => {
     if (ok) navigate('/dashboard');
   };
 
+  // ========== NOMBRE DEL GRUPO ==========
+  const groupName = currentGroup?.name || 'Sin nombre';
+
   return (
     <div className="min-h-screen">
       <Header title="Calendario del grupo" />
@@ -87,7 +90,13 @@ const GroupPage = () => {
             >
               <ArrowLeft size={18} /> Volver
             </button>
-            <h2 className="mt-4 text-3xl font-semibold text-slate-900 dark:text-white">Eventos del grupo</h2>
+            {/* ========== TÍTULO CON NOMBRE DEL GRUPO EN NEGRITA ========== */}
+            <h2 className="mt-4 text-3xl font-semibold text-slate-900 dark:text-white">
+              Eventos del grupo{' '}
+              <span className="font-bold text-blue-600 dark:text-blue-400">
+                {groupName}
+              </span>
+            </h2>
             <p className="mt-1 text-slate-600 dark:text-slate-400">Haz clic en una fecha para crear un evento o selecciona uno existente.</p>
           </div>
           <div className="flex flex-wrap gap-3">
@@ -114,7 +123,13 @@ const GroupPage = () => {
         )}
 
         <div className="grid gap-6 xl:grid-cols-[1.3fr_0.7fr]">
-          <CalendarView events={events} onDateClick={handleDateClick} onEventClick={handleEventClick} />
+          {/* ========== PASAR groupName A CalendarView ========== */}
+          <CalendarView
+            events={events}
+            onDateClick={handleDateClick}
+            onEventClick={handleEventClick}
+            groupName={groupName} // ← NUEVA PROP
+          />
           <div className="space-y-4">
             <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-600 dark:bg-slate-800">
               <h3 className="text-xl font-semibold text-slate-900 dark:text-white">Miembros del grupo</h3>
