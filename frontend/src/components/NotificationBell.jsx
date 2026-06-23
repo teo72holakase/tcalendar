@@ -14,7 +14,7 @@ const getDaysLeft = (dueDate) => {
 const getStyle = (days) => {
   if (days < -1) return null;
   if (days === -1) return { bg: 'bg-slate-400 dark:bg-slate-600', text: 'text-white', label: 'Ayer',      past: true  };
-  if (days === 0)  return { bg: 'bg-red-400',                     text: 'text-white', label: 'Hoy',       past: false };
+  if (days === 0)  return { bg: 'bg-red-600',                     text: 'text-white', label: 'Hoy',       past: false };
   if (days === 1)  return { bg: 'bg-orange-500',                  text: 'text-white', label: 'Mañana',    past: false };
   if (days === 2)  return { bg: 'bg-yellow-600',                  text: 'text-white', label: 'En 2 días', past: false };
   if (days === 3)  return { bg: 'bg-green-700',                   text: 'text-white', label: 'En 3 días', past: false };
