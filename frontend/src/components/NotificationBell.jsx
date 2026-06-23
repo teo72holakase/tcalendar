@@ -37,8 +37,6 @@ const NotificationBell = () => {
       try {
         const { data } = await fetchUpcomingEvents();
         const filtered = data.filter(e => getDaysLeft(e.dueDate) >= -1).slice(0, 10);
-
-        // Futuros/hoy primero, pasados (ayer) al final
         const upcoming = filtered.filter(e => getDaysLeft(e.dueDate) >= 0);
         const past     = filtered.filter(e => getDaysLeft(e.dueDate) <  0);
         setEvents([...upcoming, ...past]);
@@ -89,7 +87,7 @@ const NotificationBell = () => {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-12 z-50 w-80 rounded-3xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-800">
+        <div className="fixed left-1/2 -translate-x-1/2 top-20 z-50 w-[90vw] max-w-sm rounded-3xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-800">
           <div className="border-b border-slate-100 px-5 py-4 dark:border-slate-700">
             <h3 className="font-semibold text-slate-900 dark:text-white">Próximos eventos</h3>
             <p className="text-xs text-slate-500 dark:text-slate-400">Tus eventos de los próximos 3 días</p>
