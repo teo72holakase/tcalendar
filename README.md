@@ -18,5 +18,5 @@ Calendario colaborativo con backend Node.js + Express + MongoDB y frontend React
 
 ## Errores?
 
-- Arreglate campeon, o me decís a mi, tal cual sabelo
+- Arreglate campeon, o me decís a mi, tal cual sabelo.
 
