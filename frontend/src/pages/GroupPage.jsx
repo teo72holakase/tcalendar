@@ -44,6 +44,22 @@ const GroupPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [groupId]);
 
+  // Refresca la lista visible sin bloquear la pantalla, para que cambios de avatar hechos
+  // por otros miembros aparezcan aunque ambos estén con la sesión abierta.
+  useEffect(() => {
+    if (!groupId) return;
+    const refresh = () => {
+      if (document.visibilityState === 'visible') loadMembers(groupId);
+    };
+    const interval = window.setInterval(refresh, 60000);
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', refresh);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groupId]);
+
   // La agenda mira de dos semanas atrás a cuatro meses adelante; la vista Mes pide su propio rango.
   useEffect(() => {
     if (view !== 'agenda') return;

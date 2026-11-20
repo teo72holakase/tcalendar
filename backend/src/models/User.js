@@ -12,8 +12,12 @@ const UserSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  // Retrato elegido entre los 8 incluidos en frontend-alt/public/avatars.
-  avatar: { type: String, default: '01' },
+  // Retrato persistente elegido por el usuario entre los 8 disponibles.
+  avatar: {
+    type: String,
+    enum: ['01', '02', '03', '04', '05', '06', '07', '08'],
+    default: '01',
+  },
   failedAttempts: { type: Number, default: 0 },
   lockUntil: { type: Date, default: null },
   groups: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Group' }],

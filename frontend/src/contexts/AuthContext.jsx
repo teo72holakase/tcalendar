@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { loginUser, registerUser, updateAvatar as updateAvatarRequest } from '../services/api';
+import { loginUser, registerUser, updateAvatar as updateAvatarRequest, fetchCurrentUser } from '../services/api';
 
 const AuthContext = createContext();
 
@@ -10,13 +10,23 @@ export const AuthProvider = ({ children }) => {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    try {
-      const storedUser = localStorage.getItem('tcalendar_user');
-      if (storedUser) setUser(JSON.parse(storedUser));
-    } catch {
-      localStorage.removeItem('tcalendar_user'); // dato corrupto: empezar de cero en vez de dejar la pantalla en blanco
-    }
-    setInitialized(true); // listo — ahora sí sabemos si hay sesión o no
+    const restoreSession = async () => {
+      try {
+        const storedUser = localStorage.getItem('tcalendar_user');
+        if (storedUser) setUser(JSON.parse(storedUser));
+
+        if (localStorage.getItem('tcalendar_token')) {
+          const { data } = await fetchCurrentUser();
+          setUser(data);
+          localStorage.setItem('tcalendar_user', JSON.stringify(data));
+        }
+      } catch {
+        // Si el perfil no pudo revalidarse, mantener el dato local para abrir la app.
+      } finally {
+        setInitialized(true);
+      }
+    };
+    restoreSession();
   }, []);
 
   const saveUser = (userData, token) => {
@@ -37,6 +47,7 @@ export const AuthProvider = ({ children }) => {
       const next = { ...user, avatar: data.avatar };
       localStorage.setItem('tcalendar_user', JSON.stringify(next));
       setUser(next);
+      window.dispatchEvent(new CustomEvent('tcalendar-avatar-updated', { detail: next }));
       return true;
     } catch {
       setError('No se pudo guardar la foto de perfil');

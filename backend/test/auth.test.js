@@ -22,7 +22,7 @@ const fakeUser = {
 const modelPath = require.resolve(path.join(__dirname, '../src/models/User'));
 require.cache[modelPath] = { id: modelPath, filename: modelPath, loaded: true, exports: fakeUser };
 
-const { register, login, changePassword, adminResetPassword } = require('../src/controllers/authController');
+const { register, login, changePassword, adminResetPassword, updateAvatar, getCurrentUser } = require('../src/controllers/authController');
 const { isAdmin } = require('../src/utils/admin');
 
 const call = async (fn, body, user) => {
@@ -75,4 +75,14 @@ test('isAdmin + login informa isAdmin + adminResetPassword', async () => {
   assert.strictEqual((await call(adminResetPassword, { username: 'MIGUEL', password: 'reseteada1' })).status, 200);
   assert.strictEqual(db[0].lockUntil, null);
   assert.strictEqual((await call(login, { username: 'miguel', password: 'reseteada1' })).status, 200);
+});
+
+test('avatar se valida, persiste y se devuelve al revalidar la sesión', async () => {
+  const me = { _id: db[0]._id };
+  assert.strictEqual((await call(updateAvatar, { avatar: 'invalido' }, me)).status, 400);
+  assert.strictEqual((await call(updateAvatar, { avatar: '06' }, me)).status, 200);
+  assert.strictEqual(db[0].avatar, '06');
+  const current = await call(getCurrentUser, {}, db[0]);
+  assert.strictEqual(current.status, 200);
+  assert.strictEqual(current.json.avatar, '06');
 });

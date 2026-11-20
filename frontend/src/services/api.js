@@ -3,7 +3,7 @@ import axios from 'axios';
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'https://tcalendar.onrender.com',
   headers: { 'Content-Type': 'application/json' },
-  timeout: 60000, // el servidor gratuito puede tardar ~50 s en despertar; mejor un error claro que un spinner infinito
+  timeout: 30000,
 });
 
 api.interceptors.request.use((config) => {
@@ -14,8 +14,8 @@ api.interceptors.request.use((config) => {
 
 // Render gratis duerme el servidor tras un rato sin uso. Mientras despierta (~50 s) responde con error de red
 // o 502/503/504: las lecturas (GET) se reintentan solas en vez de fallar y dejar la pantalla vacía.
-const MAX_RETRIES = 12;
-const RETRY_DELAY_MS = 4000;
+const MAX_RETRIES = 8;
+const RETRY_DELAY_MS = 3000;
 const isWakingUp = (error) => error.code === 'ERR_NETWORK' || [502, 503, 504].includes(error.response?.status);
 
 api.interceptors.response.use(
@@ -40,6 +40,7 @@ api.interceptors.response.use(
 export const wakeServer = () => api.get('/health').catch(() => {});
 export const registerUser        = (payload)           => api.post('/auth/register', payload);
 export const loginUser           = (payload)           => api.post('/auth/login', payload);
+export const fetchCurrentUser    = ()                  => api.get('/auth/me');
 export const fetchGroups         = ()                  => api.get('/groups');
 export const createGroup         = (payload)           => api.post('/groups', payload);
 export const deleteGroup         = (groupId)           => api.delete(`/groups/${groupId}`);

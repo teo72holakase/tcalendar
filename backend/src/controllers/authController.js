@@ -145,3 +145,12 @@ exports.updateAvatar = async (req, res) => {
     res.status(500).json({ message: 'No se pudo guardar la foto' });
   }
 };
+
+exports.getCurrentUser = async (req, res) => {
+  res.json({
+    id: req.user._id,
+    username: req.user.username,
+    avatar: req.user.avatar || '01',
+    isAdmin: isAdmin(req.user),
+  });
+};

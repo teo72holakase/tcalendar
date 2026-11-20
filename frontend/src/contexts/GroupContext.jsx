@@ -37,8 +37,8 @@ export const GroupProvider = ({ children }) => {
     }
   };
 
-  // Solo recargar al cambiar de cuenta, no al actualizar el perfil (p. ej. el avatar).
-  const userId = user?._id;
+  // Soporta las respuestas históricas con "_id" y las nuevas respuestas normalizadas con "id".
+  const userId = user?.id ?? user?._id;
   useEffect(() => {
     setGroupsLoaded(false);
     lastGroupsLoad.current = 0;
@@ -47,6 +47,13 @@ export const GroupProvider = ({ children }) => {
     else setGroups([]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
+
+  useEffect(() => {
+    const refreshAvatar = () => loadGroups(true);
+    window.addEventListener('tcalendar-avatar-updated', refreshAvatar);
+    return () => window.removeEventListener('tcalendar-avatar-updated', refreshAvatar);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Al volver a la pestaña después de un rato (o si la última carga falló), refrescar los grupos en silencio.
   useEffect(() => {
