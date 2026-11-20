@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="es" data-skin="oceano">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="description" content="TCalendar: el calendario de tu grupo, con cada entrega a la vista." />
+    <meta name="theme-color" content="#F2F8F7" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <title>TCalendar</title>
+    <!-- Aplica modo y tema antes del primer pintado (evita el parpadeo). Debe quedar inline, sin defer ni module. -->
+    <script>
+      try {
+        var r = document.documentElement, t = localStorage.getItem('tcalendar_theme');
+        r.classList.toggle('dark', t === 'dark' || (t !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches));
+        var s = localStorage.getItem('tcalendar_skin');
+        if (s) r.dataset.skin = s;
+      } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
