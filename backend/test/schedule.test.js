@@ -57,3 +57,82 @@ test('rechaza bloques fuera de la tabla, colores inválidos y dimensiones extrem
   badWidth.settings.columnWidth = 999;
   assert.match(validateSchedule(badWidth).error, /configuración/i);
 });
+
+test('ajusta los eventos a cada fila regular y conserva el final exacto del rango', () => {
+  const rows15 = structuredClone(validSchedule);
+  rows15.settings.interval = 15;
+  rows15.blocks[0].startMinute = 630;
+  rows15.blocks[0].endMinute = 705;
+  assert.equal(validateSchedule(rows15).value.blocks[0].endMinute, 705);
+
+  const offGrid = structuredClone(rows15);
+  offGrid.settings.interval = 30;
+  assert.match(validateSchedule(offGrid).error, /filas/i);
+});
+
+test('valida períodos de duración variable con pausas sin perder sus horas reales', () => {
+  const blocksSchedule = {
+    title: 'Secuencia diaria',
+    settings: {
+      layoutMode: 'blocks',
+      days: [1, 2, 3, 4, 5],
+      startMinute: 635,
+      endMinute: 705,
+      interval: 15,
+      columnWidth: 152,
+      rowHeight: 40,
+      cornerLabel: 'Hora',
+      periods: [
+        { id: 'period-1', label: 'Hora 1', durationMinutes: 35, gapAfterMinutes: 5 },
+        { id: 'period-2', label: 'Hora 2', durationMinutes: 30, gapAfterMinutes: 0 },
+      ],
+    },
+    blocks: [{
+      title: 'Química',
+      days: [1],
+      rowId: 'period-2',
+      startMinute: 675,
+      endMinute: 705,
+      color: '#3478a8',
+      tone: 'soft',
+    }],
+  };
+  assert.equal(validateSchedule(blocksSchedule).value.blocks[0].startMinute, 675);
+
+  const wrongPeriod = structuredClone(blocksSchedule);
+  wrongPeriod.blocks[0].startMinute = 670;
+  assert.match(validateSchedule(wrongPeriod).error, /período/i);
+});
+
+test('valida una grilla Custom libre con columnas y filas propias', () => {
+  const custom = {
+    title: 'Tablero de tareas',
+    settings: {
+      layoutMode: 'custom',
+      days: [],
+      startMinute: 0,
+      endMinute: 1440,
+      interval: 15,
+      columnWidth: 152,
+      rowHeight: 36,
+      cornerLabel: 'Etapa',
+      columns: [{ id: 'equipo-a', label: 'Equipo A', width: 180 }],
+      rows: [{ id: 'fase-1', label: 'Fase 1', height: 72, gapAfterMinutes: 0 }],
+    },
+    blocks: [{
+      title: 'Diseño',
+      days: [],
+      rowId: 'fase-1',
+      columnId: 'equipo-a',
+      color: '#3478a8',
+      tone: 'balanced',
+    }],
+  };
+  const result = validateSchedule(custom);
+  assert.equal(result.value.settings.columns[0].label, 'Equipo A');
+  assert.equal(result.value.blocks[0].startMinute, null);
+
+  const invalidCell = structuredClone(custom);
+  invalidCell.blocks[0].columnId = 'missing';
+  assert.match(validateSchedule(invalidCell).error, /Custom/i);
+});

@@ -153,8 +153,8 @@ dialog.sheet[open] { animation: sheet-in 0.22s ease-out; }
 }
 .schedule-tab:hover { color: rgb(var(--ink)); border-color: rgb(var(--muted) / 0.45); }
 .schedule-tab-active { border-color: rgb(var(--accent) / 0.45); background: rgb(var(--accent-soft)); color: rgb(var(--accent-text)); }
-.schedule-export { min-width: 0; }
-.schedule-scroll { overflow-x: auto; overscroll-behavior-x: contain; border: 1px solid rgb(var(--line)); border-radius: 1.1rem; background: rgb(var(--surface)); }
+.schedule-export { width: 100%; min-width: 0; }
+.schedule-scroll { width: 100%; max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; touch-action: pan-x pan-y; border: 1px solid rgb(var(--line)); border-radius: 1.1rem; background: rgb(var(--surface)); }
 .schedule-board {
   display: grid; width: max-content; min-width: 100%; overflow: hidden;
   background: rgb(var(--surface)); color: rgb(var(--ink)); print-color-adjust: exact; -webkit-print-color-adjust: exact;
@@ -180,22 +180,46 @@ dialog.sheet[open] { animation: sheet-in 0.22s ease-out; }
   color: rgb(var(--muted)); font-size: 0.76rem; font-variant-numeric: tabular-nums; line-height: 1;
 }
 .schedule-time-end { transform: translateY(-100%); }
+.schedule-row-reference {
+  position: absolute; right: 0; left: 0; display: flex; flex-direction: column; justify-content: center;
+  overflow: visible; padding: 0.2rem 0.3rem; border-bottom: 1px solid rgb(var(--line) / 0.78);
+  color: rgb(var(--muted)); line-height: 1.15;
+}
+.schedule-row-reference-title { overflow-wrap: anywhere; font-size: 0.66rem; font-weight: 750; }
+.schedule-row-reference-detail { font-size: 0.56rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.schedule-gap-marker {
+  position: absolute; right: 2px; z-index: 4; display: inline-flex; align-items: center; gap: 2px;
+  transform: translateY(-50%); border: 1px solid rgb(var(--accent) / 0.38); border-radius: 999px;
+  background: rgb(var(--surface-2)); padding: 1px 4px; color: rgb(var(--accent-text)); font-size: 0.55rem;
+  font-weight: 750; line-height: 1.2; white-space: nowrap;
+}
+.schedule-gap-marker b { display: inline-flex; width: 0.8rem; height: 0.8rem; align-items: center; justify-content: center; border-radius: 999px; background: rgb(var(--accent-soft)); font-size: 0.72rem; }
 .schedule-day-column {
   position: relative; min-width: var(--schedule-column-width);
   border-left: 1px solid rgb(var(--line));
   background-image: linear-gradient(to bottom, rgb(var(--line) / 0.72) 1px, transparent 1px);
   background-size: 100% var(--schedule-row-height);
 }
+.schedule-board[data-layout-mode='blocks'] .schedule-day-column,
+.schedule-board[data-layout-mode='custom'] .schedule-day-column { background-image: none; }
 .schedule-day-editable { cursor: crosshair; }
 .schedule-day-editable:hover { background-color: rgb(var(--accent) / 0.035); }
+.schedule-grid-rule { position: absolute; right: 0; left: 0; z-index: 1; border-top: 1px solid rgb(var(--line) / 0.78); pointer-events: none; }
 .schedule-block {
-  position: absolute; z-index: 2; display: flex; min-width: 0; min-height: 24px;
+  position: absolute; z-index: 2; display: flex; min-width: 0; min-height: 0;
   flex-direction: column; align-items: flex-start; gap: 1px; overflow: hidden; padding: 4px 6px;
   border: 0; border-left: 4px solid var(--block-color); border-radius: 7px;
-  background: color-mix(in srgb, var(--block-color) var(--block-fill), rgb(var(--surface)));
+  background-color: color-mix(in srgb, var(--block-color) var(--block-fill), rgb(var(--surface)));
   color: var(--block-screen-ink); cursor: pointer; text-align: left; line-height: 1.2;
   transition: filter 0.15s, box-shadow 0.15s;
 }
+.schedule-block[data-layout-mode='interval']::after {
+  position: absolute; inset: 0; border-radius: inherit; background-image: repeating-linear-gradient(
+    to bottom, transparent 0, transparent calc(var(--block-row-height) - 1px),
+    rgb(var(--line) / 0.58) calc(var(--block-row-height) - 1px), rgb(var(--line) / 0.58) var(--block-row-height)
+  ); content: ''; pointer-events: none;
+}
+.schedule-block > span { position: relative; z-index: 1; }
 .schedule-block:hover { filter: saturate(1.12); box-shadow: 0 2px 8px rgb(0 0 0 / 0.12); }
 .schedule-block:focus-visible { z-index: 3; outline-offset: -2px; }
 .schedule-block[data-tone='soft'] { border: 1px solid color-mix(in srgb, var(--block-color) 45%, rgb(var(--line))); border-left: 4px solid var(--block-color); }
@@ -220,6 +244,8 @@ dialog.sheet[open] { animation: sheet-in 0.22s ease-out; }
   font-size: calc(0.88rem * var(--schedule-export-scale));
 }
 .schedule-board.schedule-png-expanded .schedule-corner { padding-right: calc(0.75rem * var(--schedule-export-scale)); }
+.schedule-board.schedule-png-expanded .schedule-row-reference-title { font-size: calc(0.66rem * var(--schedule-export-scale)); }
+.schedule-board.schedule-png-expanded .schedule-row-reference-detail { font-size: calc(0.56rem * var(--schedule-export-scale)); }
 .schedule-board.schedule-png-expanded .schedule-time-tick {
   right: calc(0.65rem * var(--schedule-export-scale));
   font-size: calc(0.76rem * var(--schedule-export-scale));
@@ -239,3 +265,6 @@ dialog.sheet[open] { animation: sheet-in 0.22s ease-out; }
 .schedule-board.schedule-png-expanded .schedule-block[data-overlap='true'] .schedule-block-time { display: none; }
 .schedule-range { width: 100%; height: 2.5rem; accent-color: rgb(var(--accent)); cursor: pointer; }
 .schedule-settings { border: 0; border-top: 1px solid rgb(var(--line)); border-radius: 0; background: transparent; padding: 1.25rem 0 0; }
+.schedule-gap-control { display: flex; min-height: 2.5rem; align-items: center; justify-content: center; gap: 0.5rem; color: rgb(var(--muted)); font-size: 0.75rem; font-weight: 650; }
+.schedule-gap-plus { display: inline-flex; width: 1.5rem; height: 1.5rem; align-items: center; justify-content: center; border: 1px solid rgb(var(--accent) / 0.38); border-radius: 999px; background: rgb(var(--accent-soft)); color: rgb(var(--accent-text)); font-size: 1rem; }
+.schedule-gap-input { width: 5rem; min-height: 2rem; padding: 0.25rem 0.4rem; text-align: center; }

@@ -12,7 +12,7 @@ import {
   addScheduleToGroup, createSchedule, deleteSchedule, fetchSchedules,
   removeScheduleFromGroup, updateSchedule,
 } from '../services/api';
-import { createPreset, SCHEDULE_PRESETS } from '../lib/schedulePresets';
+import { cloneSettings, createPreset, getPeriodRows, normalizeSchedule, SCHEDULE_PRESETS } from '../lib/schedulePresets';
 
 const errorMessage = (error, fallback) => error.response?.data?.message || fallback;
 const schedulePayload = ({ title, settings, blocks }) => ({ title, settings, blocks });
@@ -41,42 +41,58 @@ const captureSchedule = async (node, format) => {
     if (format?.width && format?.height) {
       const slots = Number(node.dataset.scheduleSlots);
       const days = Number(node.style.getPropertyValue('--schedule-days'));
-      const rowHeight = Number.parseFloat(node.style.getPropertyValue('--schedule-row-height'));
       const title = node.querySelector('.schedule-board-title');
       const heading = node.querySelector('.schedule-day-heading, .schedule-corner');
       const widthScale = format.width / node.scrollWidth;
       const heightScale = format.height / node.scrollHeight;
       const textScale = Math.sqrt(widthScale * heightScale);
       const timeColumnWidth = 76 * textScale;
-      const columnWidth = (format.width - timeColumnWidth) / days;
 
-      if (!slots || !days || !rowHeight || columnWidth <= 0) {
+      if (!slots || !days || !Number(node.dataset.scheduleBoardHeight)) {
+        throw new Error('No se pudo adaptar el horario al formato PNG');
+      }
+
+      const sourceColumnWidths = [...node.querySelectorAll('.schedule-day-heading')]
+        .map((item) => item.getBoundingClientRect().width);
+      const totalColumnWidth = sourceColumnWidths.reduce((sum, width) => sum + width, 0);
+      const targetColumnsWidth = format.width - timeColumnWidth;
+      const columnWidths = sourceColumnWidths.map((width) => (width / totalColumnWidth) * targetColumnsWidth);
+      const dayColumns = [...node.querySelectorAll('.schedule-day-column')];
+      const columnWidthByElement = new Map(dayColumns.map((element, index) => [element, columnWidths[index]]));
+      if (!totalColumnWidth || columnWidths.some((width) => width <= 0)) {
         throw new Error('No se pudo adaptar el horario al formato PNG');
       }
 
       node.style.width = `${format.width}px`;
       node.style.minWidth = `${format.width}px`;
-      node.style.gridTemplateColumns = `${timeColumnWidth}px repeat(${days}, minmax(${columnWidth}px, 1fr))`;
-      node.style.setProperty('--schedule-column-width', `${columnWidth}px`);
+      node.style.gridTemplateColumns = `${timeColumnWidth}px ${columnWidths.map((width) => `${width}px`).join(' ')}`;
       node.style.setProperty('--schedule-export-scale', String(textScale));
 
       const titleHeight = title.getBoundingClientRect().height;
       const headingHeight = heading.getBoundingClientRect().height;
-      const nextRowHeight = (format.height - titleHeight - headingHeight) / slots;
-      if (nextRowHeight <= 0) {
+      const sourceContentHeight = Number(node.dataset.scheduleBoardHeight);
+      const nextContentHeight = format.height - titleHeight - headingHeight;
+      const scaleY = nextContentHeight / sourceContentHeight;
+      if (nextContentHeight <= 0 || !Number.isFinite(scaleY)) {
         throw new Error('No se pudo adaptar el horario al formato PNG');
       }
 
-      node.style.setProperty('--schedule-row-height', `${nextRowHeight}px`);
-      const scaleY = nextRowHeight / rowHeight;
-      node.querySelectorAll('.schedule-time-axis, .schedule-day-column, .schedule-time-tick, .schedule-block').forEach((element) => {
+      node.style.setProperty('--schedule-row-height', `${Number.parseFloat(node.style.getPropertyValue('--schedule-row-height')) * scaleY}px`);
+      node.querySelectorAll('.schedule-time-axis, .schedule-day-column, .schedule-time-tick, .schedule-row-reference, .schedule-block, .schedule-gap-marker, .schedule-grid-rule').forEach((element) => {
         originalChildStyles.push([element, element.getAttribute('style')]);
         if (element.matches('.schedule-time-axis, .schedule-day-column')) {
-          element.style.height = `${slots * nextRowHeight}px`;
+          element.style.height = `${nextContentHeight}px`;
+          if (columnWidthByElement.has(element)) {
+            element.style.setProperty('--schedule-column-width', `${columnWidthByElement.get(element)}px`);
+          }
         } else {
           element.style.top = `${Number.parseFloat(element.style.top) * scaleY}px`;
-          if (element.matches('.schedule-block')) {
+          if (element.matches('.schedule-block, .schedule-row-reference')) {
             element.style.height = `${Number.parseFloat(element.style.height) * scaleY}px`;
+          }
+          if (element.matches('.schedule-block')) {
+            const blockRowHeight = Number.parseFloat(element.style.getPropertyValue('--block-row-height'));
+            element.style.setProperty('--block-row-height', `${blockRowHeight * scaleY}px`);
           }
         }
       });
@@ -115,7 +131,7 @@ const SchedulesPage = () => {
   const [message, setMessage] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
   const [createError, setCreateError] = useState('');
-  const [blockState, setBlockState] = useState({ open: false, block: null, day: null, minute: null });
+  const [blockState, setBlockState] = useState({ open: false, block: null, day: null, minute: null, rowId: '', columnId: '' });
   const [blockError, setBlockError] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsDraft, setSettingsDraft] = useState(null);
@@ -130,8 +146,9 @@ const SchedulesPage = () => {
     fetchSchedules()
       .then(({ data }) => {
         if (!active) return;
-        setSchedules(data);
-        setSelectedId(data[0]?._id || '');
+        const normalized = data.map(normalizeSchedule);
+        setSchedules(normalized);
+        setSelectedId(normalized[0]?._id || '');
       })
       .catch((err) => { if (active) setError(errorMessage(err, 'No se pudieron cargar los horarios')); })
       .finally(() => { if (active) setLoading(false); });
@@ -144,15 +161,38 @@ const SchedulesPage = () => {
   const isOwner = Boolean(selected && currentUserId && currentUserId === ownerId);
   const availableGroups = groups.filter((group) => !selected?.sharedWith?.some((shared) => String(shared?._id ?? shared) === String(group._id)));
   const isSettingsChanged = Boolean(selected && settingsDraft && JSON.stringify(settingsDraft) !== JSON.stringify(selected.settings));
-  const blocksFit = Boolean(selected && settingsDraft && selected.blocks.every((block) => (
-    block.days.every((day) => settingsDraft.days.includes(day))
-    && block.startMinute >= settingsDraft.startMinute
-    && block.endMinute <= settingsDraft.endMinute
-  )));
+  const blocksFit = Boolean(selected && settingsDraft && selected.blocks.every((block) => {
+    const mode = settingsDraft.layoutMode || 'interval';
+    if (mode === 'custom') {
+      return settingsDraft.columns.some((column) => column.id === block.columnId)
+        && settingsDraft.rows.some((row) => row.id === block.rowId);
+    }
+    if (!block.days?.length || block.days.some((day) => !settingsDraft.days.includes(day))) return false;
+    if (mode === 'blocks') return settingsDraft.periods.some((period) => period.id === block.rowId);
+    return block.startMinute >= settingsDraft.startMinute
+      && block.endMinute <= settingsDraft.endMinute
+      && (block.startMinute - settingsDraft.startMinute) % settingsDraft.interval === 0
+      && (block.endMinute - settingsDraft.startMinute) % settingsDraft.interval === 0;
+  }));
+  const settingsReady = Boolean(settingsDraft && (
+    settingsDraft.layoutMode === 'interval'
+      ? settingsDraft.days.length > 0 && settingsDraft.startMinute < settingsDraft.endMinute
+        && (settingsDraft.endMinute - settingsDraft.startMinute) % settingsDraft.interval === 0
+      : settingsDraft.layoutMode === 'blocks'
+        ? settingsDraft.days.length > 0 && settingsDraft.periods.length > 0
+          && settingsDraft.periods.every((period) => period.label.trim()
+            && Number.isInteger(period.durationMinutes) && period.durationMinutes >= 15
+            && Number.isInteger(period.gapAfterMinutes) && period.gapAfterMinutes >= 0)
+          && settingsDraft.startMinute + settingsDraft.periods.reduce((sum, period) => sum + period.durationMinutes + period.gapAfterMinutes, 0) - settingsDraft.periods.at(-1).gapAfterMinutes <= 1440
+        : settingsDraft.columns.length > 0 && settingsDraft.rows.length > 0
+          && settingsDraft.columns.every((column) => column.label.trim() && Number.isInteger(column.width) && column.width >= 100 && column.width <= 320)
+          && settingsDraft.rows.every((row) => row.label.trim() && Number.isInteger(row.height) && row.height >= 28 && row.height <= 240
+            && Number.isInteger(row.gapAfterMinutes) && row.gapAfterMinutes >= 0)
+  ));
 
   useEffect(() => {
     if (!selected) return;
-    setSettingsDraft({ ...selected.settings, days: [...selected.settings.days] });
+    setSettingsDraft(cloneSettings(selected.settings));
     setTitleDraft(selected.title);
     setRenaming(false);
     setSettingsOpen(false);
@@ -165,7 +205,8 @@ const SchedulesPage = () => {
   }, [message]);
 
   const replaceSchedule = (schedule) => {
-    setSchedules((current) => current.map((item) => item._id === schedule._id ? schedule : item));
+    const normalized = normalizeSchedule(schedule);
+    setSchedules((current) => current.map((item) => item._id === normalized._id ? normalized : item));
   };
 
   const saveSchedule = async (payload) => {
@@ -175,7 +216,7 @@ const SchedulesPage = () => {
       const { data } = await updateSchedule(selected._id, schedulePayload(payload));
       replaceSchedule(data);
       setMessage('Horario guardado');
-      return data;
+      return normalizeSchedule(data);
     } catch (err) {
       setError(errorMessage(err, 'No se pudo guardar el horario'));
       return null;
@@ -189,7 +230,8 @@ const SchedulesPage = () => {
     setCreateError('');
     setError('');
     try {
-      const { data: schedule } = await createSchedule(data);
+      const { data: created } = await createSchedule(data);
+      const schedule = normalizeSchedule(created);
       setSchedules((current) => [schedule, ...current]);
       setSelectedId(schedule._id);
       setCreateOpen(false);
@@ -208,7 +250,7 @@ const SchedulesPage = () => {
       ? selected.blocks.map((item) => String(item._id) === String(blockState.block._id) ? { ...blockState.block, ...block } : item)
       : [...selected.blocks, block];
     if (await saveSchedule({ ...selected, blocks })) {
-      setBlockState({ open: false, block: null, day: null, minute: null });
+      setBlockState({ open: false, block: null, day: null, minute: null, rowId: '', columnId: '' });
       setBlockError('');
     } else {
       setBlockError(error || 'No se pudo guardar el bloque');
@@ -218,7 +260,7 @@ const SchedulesPage = () => {
   const deleteBlock = async () => {
     if (!window.confirm(`¿Eliminar “${blockState.block.title}” de este horario?`)) return;
     const blocks = selected.blocks.filter((item) => String(item._id) !== String(blockState.block._id));
-    if (await saveSchedule({ ...selected, blocks })) setBlockState({ open: false, block: null, day: null, minute: null });
+    if (await saveSchedule({ ...selected, blocks })) setBlockState({ open: false, block: null, day: null, minute: null, rowId: '', columnId: '' });
   };
 
   const addToGroup = async (groupId) => {
@@ -414,14 +456,14 @@ const SchedulesPage = () => {
                         <>
                           <button type="button" onClick={() => {
                             if (settingsOpen) {
-                              setSettingsDraft({ ...selected.settings, days: [...selected.settings.days] });
+                              setSettingsDraft(cloneSettings(selected.settings));
                               setSettingsOpen(false);
                             } else {
-                              setSettingsDraft({ ...selected.settings, days: [...selected.settings.days] });
+                              setSettingsDraft(cloneSettings(selected.settings));
                               setSettingsOpen(true);
                             }
                           }} className="btn btn-quiet btn-sm"><Settings2 size={16} aria-hidden="true" /> Tabla</button>
-                          <button type="button" onClick={() => { setBlockError(''); setBlockState({ open: true, block: null, day: null, minute: null }); }} disabled={isSettingsChanged} className="btn btn-primary btn-sm"><Plus size={17} aria-hidden="true" /> Bloque</button>
+                          <button type="button" onClick={() => { setBlockError(''); setBlockState({ open: true, block: null, day: null, minute: null, rowId: '', columnId: '' }); }} disabled={isSettingsChanged} className="btn btn-primary btn-sm"><Plus size={17} aria-hidden="true" /> Bloque</button>
                         </>
                       )}
                       {isOwner && <button type="button" onClick={removeSchedule} disabled={saving} aria-label="Eliminar horario" title="Eliminar horario" className="btn btn-quiet btn-sm text-danger"><Trash2 size={16} aria-hidden="true" /></button>}
@@ -434,16 +476,25 @@ const SchedulesPage = () => {
                         value={settingsDraft}
                         onChange={setSettingsDraft}
                         onSave={async () => {
-                          const saved = await saveSchedule({ ...selected, settings: settingsDraft });
+                          const periods = settingsDraft.layoutMode === 'blocks' ? getPeriodRows(settingsDraft) : [];
+                          const blocks = settingsDraft.layoutMode === 'blocks'
+                            ? selected.blocks.map((block) => {
+                              const period = periods.find((item) => item.id === block.rowId);
+                              return period ? { ...block, startMinute: period.startMinute, endMinute: period.endMinute } : block;
+                            })
+                            : selected.blocks;
+                          const saved = await saveSchedule({ ...selected, settings: settingsDraft, blocks });
                           if (saved) setSettingsOpen(false);
                         }}
                         onCancel={() => {
-                          setSettingsDraft({ ...selected.settings, days: [...selected.settings.days] });
+                          setSettingsDraft(cloneSettings(selected.settings));
                           setSettingsOpen(false);
                         }}
                         saving={saving}
                         error={error}
                         blocksFit={blocksFit}
+                        blocks={selected.blocks}
+                        settingsReady={settingsReady}
                       />
                     </div>
                   )}
@@ -483,12 +534,12 @@ const SchedulesPage = () => {
                   canEdit={isOwner && !isSettingsChanged}
                   gridRef={gridRef}
                   onEditBlock={(block) => { setBlockError(''); setBlockState({ open: true, block, day: null, minute: null }); }}
-                  onAddBlock={(day, minute) => { setBlockError(''); setBlockState({ open: true, block: null, day, minute }); }}
+                  onAddBlock={(day, minute, rowId = '', columnId = '') => { setBlockError(''); setBlockState({ open: true, block: null, day, minute, rowId, columnId }); }}
                 />
                 <p className="no-print mt-2 text-center text-xs text-muted">
                   {isOwner && 'Seleccioná un espacio vacío para agregar un bloque o uno existente para editarlo.'}
-                  {isOwner && <span className="sm:hidden"> Deslizá la tabla para ver todos los días.</span>}
-                  {!isOwner && <span className="sm:hidden">Deslizá la tabla hacia los lados para ver todos los días.</span>}
+                  {isOwner && <span className="sm:hidden">{selected.settings.layoutMode === 'custom' ? ' Deslizá la grilla para ver todas las columnas.' : ' Deslizá la tabla para ver todos los días.'}</span>}
+                  {!isOwner && <span className="sm:hidden">{selected.settings.layoutMode === 'custom' ? 'Deslizá la grilla hacia los lados para ver todas las columnas.' : 'Deslizá la tabla hacia los lados para ver todos los días.'}</span>}
                 </p>
                 <section className="card no-print mt-5 p-4 sm:p-5" aria-label="Descargar horario">
                   <div className="flex flex-wrap items-center justify-between gap-4">
@@ -538,13 +589,15 @@ const SchedulesPage = () => {
       {selected && isOwner && (
         <ScheduleBlockModal
           open={blockState.open}
-          onClose={() => { setBlockState({ open: false, block: null, day: null, minute: null }); setBlockError(''); }}
+          onClose={() => { setBlockState({ open: false, block: null, day: null, minute: null, rowId: '', columnId: '' }); setBlockError(''); }}
           onSave={saveBlock}
           onDelete={blockState.block ? deleteBlock : null}
           settings={selected.settings}
           initialData={blockState.block}
           initialDay={blockState.day}
           initialMinute={blockState.minute}
+          initialRowId={blockState.rowId}
+          initialColumnId={blockState.columnId}
           loading={saving}
           error={blockError}
         />

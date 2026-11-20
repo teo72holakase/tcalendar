@@ -50,9 +50,9 @@
 
 ### Horarios semanales
 
-- Crear varias tablas desde cero o a partir de presets de estudio, trabajo, clases y actividades.
-- Personalizar días, rango y separación horaria, ancho de columnas y alto de filas.
-- Añadir bloques con nombre, descripción breve, días, horas, color y tono.
+- Crear horarios con filas de 15/30 minutos, secuencias de períodos con pausas invisibles o una grilla Custom de filas y columnas libres.
+- Ajustar los días, rangos, referencias, anchos de columna y alturas de fila a la estructura elegida.
+- Añadir actividades con nombre, descripción breve, días o celdas, color y tono; los eventos por intervalo se ajustan a la grilla.
 - Compartir horarios con varios grupos: cualquier miembro puede añadirlos; quien creó el horario o el grupo puede quitarlo.
 - Descargar cada tabla como PNG normal, cuadrado, horizontal o vertical, o como PDF en una sola hoja A4 apaisada.
 
