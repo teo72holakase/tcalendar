@@ -9,6 +9,15 @@ export const SKINS = [
   { id: 'grafito', preview: ['#F4F4F2', '#1F1F1F', '#E2E2DC'], name: 'Grafito' },
 ];
 
+export const THEME_SURFACES = {
+  oceano: { light: [255, 255, 255], dark: [16, 29, 28] },
+  coral: { light: [255, 255, 255], dark: [33, 20, 16] },
+  bosque: { light: [255, 255, 255], dark: [19, 29, 17] },
+  cobalto: { light: [255, 255, 255], dark: [15, 23, 48] },
+  miel: { light: [255, 255, 255], dark: [29, 22, 10] },
+  grafito: { light: [255, 255, 255], dark: [23, 23, 23] },
+};
+
 const MODE_KEY = 'tcalendar_theme'; // 'light' | 'dark' | 'system'
 const SKIN_KEY = 'tcalendar_skin';
 const BG_KEY = 'tcalendar_bg'; // 'gradient' | 'aurora' | 'plain'

@@ -60,5 +60,11 @@ export const deleteEvent         = (eventId)           => api.delete(`/events/${
 export const fetchGroupMembers   = (groupId)           => api.get(`/groups/${groupId}/members`);
 export const updateEventColor    = (eventId, color)    => api.patch(`/events/${eventId}/color`, { color });
 export const fetchUpcomingEvents = ()                  => api.get('/events/upcoming');
+export const fetchSchedules      = ()                  => api.get('/schedules');
+export const createSchedule      = (payload)           => api.post('/schedules', payload);
+export const updateSchedule      = (id, payload)       => api.put(`/schedules/${id}`, payload);
+export const deleteSchedule      = (id)                => api.delete(`/schedules/${id}`);
+export const addScheduleToGroup  = (id, groupId)       => api.post(`/schedules/${id}/groups/${groupId}`);
+export const removeScheduleFromGroup = (id, groupId)   => api.delete(`/schedules/${id}/groups/${groupId}`);
 
 export default api;

@@ -1,6 +1,7 @@
 const Group = require('../models/Group');
 const User = require('../models/User');
 const Event = require('../models/Event');
+const Schedule = require('../models/Schedule');
 
 const getGroups = async (req, res) => {
   try {
@@ -34,6 +35,7 @@ const deleteGroup = async (req, res) => {
       return res.status(403).json({ message: 'Solo el creador puede borrar el grupo' });
     }
     await Event.deleteMany({ group: req.params.groupId });
+    await Schedule.updateMany({ sharedWith: req.params.groupId }, { $pull: { sharedWith: req.params.groupId } });
     await Group.findByIdAndDelete(req.params.groupId);
     res.json({ message: 'Grupo eliminado' });
   } catch (error) {

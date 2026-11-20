@@ -10,6 +10,7 @@ const groupRoutes = require('./src/routes/groupRoutes');
 const eventRoutes = require('./src/routes/eventRoutes');
 const inviteRoutes = require('./src/routes/inviteRoutes');
 const pushRoutes = require('./src/routes/pushRoutes');
+const scheduleRoutes = require('./src/routes/scheduleRoutes');
 
 dotenv.config();
 connectDB();
@@ -43,6 +44,7 @@ app.use('/groups', groupRoutes);
 app.use('/events', eventRoutes);
 app.use('/invites', inviteRoutes);
 app.use('/push', pushRoutes);
+app.use('/schedules', scheduleRoutes);
 
 app.get('/', (req, res) => {
   res.json({ message: 'TCalendar API is running' });

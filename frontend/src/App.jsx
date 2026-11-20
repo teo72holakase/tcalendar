@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
@@ -8,6 +9,8 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import GroupPage from './pages/GroupPage';
 import InvitePage from './pages/InvitePage';
+
+const SchedulesPage = lazy(() => import('./pages/SchedulesPage'));
 
 function ProtectedRoute({ children }) {
   const { user, initialized } = useAuth();
@@ -31,6 +34,7 @@ function AppShell() {
         <Route path="/invite/:token" element={<InvitePage />} />
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/group/:groupId" element={<ProtectedRoute><GroupPage /></ProtectedRoute>} />
+        <Route path="/schedules" element={<ProtectedRoute><Suspense fallback={<div role="status" className="flex min-h-dvh items-center justify-center gap-3 text-muted"><span className="load-ring" aria-hidden="true" /> Cargando horarios</div>}><SchedulesPage /></Suspense></ProtectedRoute>} />
       </Routes>
     </>
   );

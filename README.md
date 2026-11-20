@@ -48,6 +48,14 @@
 - Arrastrar eventos directamente en la interfaz clásica.
 - Exportar la agenda de un grupo como `.ics` para Google Calendar, Apple Calendar u Outlook.
 
+### Horarios semanales
+
+- Crear varias tablas desde cero o a partir de presets de estudio, trabajo, clases y actividades.
+- Personalizar días, rango y separación horaria, ancho de columnas y alto de filas.
+- Añadir bloques con nombre, descripción breve, días, horas, color y tono.
+- Compartir horarios con varios grupos: cualquier miembro puede añadirlos; quien creó el horario o el grupo puede quitarlo.
+- Descargar cada tabla como PNG normal, cuadrado, horizontal o vertical, o como PDF en una sola hoja A4 apaisada.
+
 ### Cuenta y acceso
 
 - Registro y acceso con usuario y contraseña.
@@ -181,7 +189,7 @@ tcalendar/
 │   │   ├── config/           Base de datos y CORS
 │   │   ├── controllers/      Casos de uso y respuestas HTTP
 │   │   ├── middleware/       Autenticación
-│   │   ├── models/           Usuarios, grupos, eventos e invitaciones
+│   │   ├── models/           Usuarios, grupos, eventos, horarios e invitaciones
 │   │   ├── routes/           Endpoints públicos y protegidos
 │   │   └── utils/            Contraseñas, administración e ICS
 │   ├── test/                 Pruebas del backend
@@ -191,10 +199,10 @@ tcalendar/
     ├── public/
     │   └── avatars/          Avatares locales y créditos
     └── src/
-        ├── components/       Calendario, modales y navegación
+        ├── components/       Calendario, horarios, modales y navegación
         ├── contexts/         Sesión, grupos y tema
         ├── lib/              Utilidades de UI
-        ├── pages/            Acceso, grupos e invitaciones
+        ├── pages/            Acceso, grupos, horarios e invitaciones
         └── services/         Cliente HTTP y push
 ```
 
