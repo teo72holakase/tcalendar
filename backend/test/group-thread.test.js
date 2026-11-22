@@ -27,6 +27,7 @@ const fakeGroup = {
 const fakePost = { exists: async () => true };
 const fakeComment = {
   exists: async (filter) => { parentFilter = filter; return true; },
+  aggregate: async () => [],
   create: async (fields) => {
     createdPayload = fields;
     return commentDocument({ ...fields, _id: '67a123456789012345678904' });

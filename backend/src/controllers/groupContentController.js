@@ -70,6 +70,15 @@ const listPage = async (model, filter, cursor) => {
   return { items, nextCursor: hasMore ? String(items.at(-1)._id) : null };
 };
 
+const getReplyCounts = async (items, groupId, postId) => {
+  if (!items.length) return new Map();
+  const counts = await GroupComment.aggregate([
+    { $match: { group: new mongoose.Types.ObjectId(groupId), post: new mongoose.Types.ObjectId(postId), parent: { $in: items.map((item) => item._id) } } },
+    { $group: { _id: '$parent', count: { $sum: 1 } } },
+  ]);
+  return new Map(counts.map(({ _id, count }) => [String(_id), count]));
+};
+
 const getPosts = async (req, res) => {
   try {
     if (!(await getMemberGroup(req.params.groupId, req.user, res))) return;
@@ -143,7 +152,11 @@ const getComments = async (req, res) => {
       parent: parentId,
     }, req.query.cursor);
     if (!result) return res.status(400).json({ message: 'Cursor no válido' });
-    result.items = await attachMentions(result.items, req.params.groupId);
+    const [items, replyCounts] = await Promise.all([
+      attachMentions(result.items, req.params.groupId),
+      getReplyCounts(result.items, req.params.groupId, req.params.postId),
+    ]);
+    result.items = items.map((item) => ({ ...item, replyCount: replyCounts.get(String(item._id)) || 0 }));
     res.json(result);
   } catch (error) {
     console.error('Error getGroupComments:', error);

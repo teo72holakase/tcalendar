@@ -12,7 +12,6 @@ const authorName = (author) => author?.username || 'Miembro';
 
 function MessageComposer({ groupId, members, value, onChange, onSubmit, disabled, placeholder, buttonLabel, maxLength = 4000, onEventClick, idSuffix = '' }) {
   const textarea = useRef(null);
-  const preview = useRef(null);
   const inputId = idSuffix || placeholder.replace(/\W+/g, '-');
   const [suggestion, setSuggestion] = useState(null);
   const [eventOptions, setEventOptions] = useState([]);
@@ -93,50 +92,48 @@ function MessageComposer({ groupId, members, value, onChange, onSubmit, disabled
   return (
     <form onSubmit={onSubmit} className="space-y-2">
       <label className="sr-only" htmlFor={inputId}>Mensaje</label>
-      <div className="group relative">
-        <div ref={preview} aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 overflow-hidden rounded-[inherit] border border-transparent bg-surface-2 px-4 py-[0.8rem] text-ink group-focus-within:bg-surface">
-          {value
-            ? <GroupRichText content={value} eventRefs={eventRefs} resourceRefs={resourceRefs} onEventClick={onEventClick} interactiveMentions={false} compact />
-            : <span className="text-muted">{placeholder}</span>}
-        </div>
-        <textarea
-          ref={textarea}
-          id={inputId}
-          className="field relative z-10 min-h-24 !bg-transparent !text-transparent caret-ink placeholder:text-transparent selection:bg-accent/20"
-          style={{ WebkitTextFillColor: 'transparent' }}
-          maxLength={maxLength}
-          value={value}
-          onChange={(event) => {
-            onChange(event.target.value);
-            cursorRef.current = event.target.selectionStart;
-            updateSuggestion(event.target.value, event.target.selectionStart);
-          }}
-          onClick={(event) => {
-            cursorRef.current = event.target.selectionStart;
-            updateSuggestion(value, event.target.selectionStart);
-          }}
-          onKeyUp={(event) => {
-            cursorRef.current = event.currentTarget.selectionStart;
-            updateSuggestion(value, event.currentTarget.selectionStart);
-          }}
-          onKeyDown={(event) => {
-            if (event.key === 'Tab' && suggestion && options.length > 0) {
-              event.preventDefault();
+      <div className="relative">
+        <div className="overflow-hidden rounded-xl border border-line bg-surface-2 transition focus-within:border-accent focus-within:ring-4 focus-within:ring-accent/20">
+          <textarea
+            ref={textarea}
+            id={inputId}
+            className="block min-h-28 w-full resize-y bg-transparent px-4 py-3 text-base leading-6 text-ink outline-none placeholder:text-muted"
+            maxLength={maxLength}
+            value={value}
+            onChange={(event) => {
+              onChange(event.target.value);
+              cursorRef.current = event.target.selectionStart;
+              updateSuggestion(event.target.value, event.target.selectionStart);
+            }}
+            onClick={(event) => {
+              cursorRef.current = event.target.selectionStart;
+              updateSuggestion(value, event.target.selectionStart);
+            }}
+            onKeyUp={(event) => {
               cursorRef.current = event.currentTarget.selectionStart;
-              if (suggestion.type === '@') insertSuggestion(`@${options[0].username}`);
-              else if (suggestion.type === '/') insertSuggestion(`/${options[0]._id}`, 'event', options[0]);
-              else insertSuggestion(`!${options[0]._id}`, 'resource', options[0]);
-              return;
-            }
-            if (suggestion && event.key === 'Escape') setSuggestion(null);
-          }}
-          onScroll={(event) => {
-            if (preview.current) preview.current.scrollTop = event.currentTarget.scrollTop;
-          }}
-          placeholder=""
-          disabled={disabled}
-          required
-        />
+              updateSuggestion(value, event.currentTarget.selectionStart);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'Tab' && suggestion && options.length > 0) {
+                event.preventDefault();
+                cursorRef.current = event.currentTarget.selectionStart;
+                if (suggestion.type === '@') insertSuggestion(`@${options[0].username}`);
+                else if (suggestion.type === '/') insertSuggestion(`/${options[0]._id}`, 'event', options[0]);
+                else insertSuggestion(`!${options[0]._id}`, 'resource', options[0]);
+                return;
+              }
+              if (suggestion && event.key === 'Escape') setSuggestion(null);
+            }}
+            placeholder={placeholder}
+            disabled={disabled}
+            required
+          />
+          {value.trim() && (
+            <div className="border-t border-line bg-surface px-4 py-3">
+              <GroupRichText content={value} eventRefs={eventRefs} resourceRefs={resourceRefs} onEventClick={onEventClick} interactiveMentions={false} compact />
+            </div>
+          )}
+        </div>
         {suggestion && suggestion.type === '@' && options.length > 0 && (
           <div className="absolute bottom-full left-0 z-20 mb-1 w-full overflow-hidden rounded-xl border border-line bg-surface shadow-lg">
             {options.map((member) => (
@@ -208,10 +205,10 @@ function CommentItem({ groupId, postId, comment, members, currentUserId, canMode
   };
 
   useEffect(() => {
-    loadReplies();
+    if (comment.replyCount > 0) loadReplies();
     // Load once when the comment appears so replies remain visible.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [groupId, postId, comment._id]);
+  }, [groupId, postId, comment._id, comment.replyCount]);
 
   const submit = async (event) => {
     event.preventDefault();
@@ -359,6 +356,29 @@ function CommentThread({ groupId, post, members, currentUserId, canModerate, onE
   );
 }
 
+function LazyCommentThread(props) {
+  const container = useRef(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    if (visible) return undefined;
+    if (!('IntersectionObserver' in window)) {
+      setVisible(true);
+      return undefined;
+    }
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setVisible(true);
+        observer.disconnect();
+      }
+    }, { rootMargin: '300px' });
+    if (container.current) observer.observe(container.current);
+    return () => observer.disconnect();
+  }, [visible]);
+
+  return <div ref={container}>{visible && <CommentThread {...props} />}</div>;
+}
+
 export default function GroupForum({ groupId, members, currentUserId, isCreator, isAdmin, onEventClick, active }) {
   const [posts, setPosts] = useState([]);
   const [cursor, setCursor] = useState(null);
@@ -452,7 +472,7 @@ export default function GroupForum({ groupId, members, currentUserId, isCreator,
               <MessageCircle size={17} aria-hidden="true" /> {hiddenComments.has(post._id) ? 'Mostrar comentarios' : 'Ocultar comentarios'}
             </button>
             <div hidden={hiddenComments.has(post._id)}>
-              <CommentThread key={post._id} groupId={groupId} post={post} members={members} currentUserId={currentUserId} canModerate={canModerate} onEventClick={onEventClick} />
+              <LazyCommentThread key={post._id} groupId={groupId} post={post} members={members} currentUserId={currentUserId} canModerate={canModerate} onEventClick={onEventClick} />
             </div>
           </article>
         );

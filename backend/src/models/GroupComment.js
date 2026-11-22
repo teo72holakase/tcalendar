@@ -10,5 +10,6 @@ const GroupCommentSchema = new mongoose.Schema({
 });
 
 GroupCommentSchema.index({ post: 1, parent: 1, _id: -1 });
+GroupCommentSchema.index({ group: 1, post: 1, parent: 1, _id: -1 });
 
 module.exports = mongoose.model('GroupComment', GroupCommentSchema);
