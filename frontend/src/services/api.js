@@ -47,6 +47,15 @@ export const deleteGroup         = (groupId)           => api.delete(`/groups/${
 export const inviteMember        = (groupId, payload)  => api.post(`/groups/${groupId}/invite`, payload);
 export const removeMember        = (groupId, memberId) => api.delete(`/groups/${groupId}/members/${memberId}`);
 export const fetchGroupEvents    = (groupId, params)  => api.get(`/groups/${groupId}/events`, { params });
+export const fetchGroupPosts     = (groupId, cursor)  => api.get(`/groups/${groupId}/posts`, { params: cursor ? { cursor } : {} });
+export const createGroupPost     = (groupId, content) => api.post(`/groups/${groupId}/posts`, { content });
+export const deleteGroupPost     = (groupId, postId)  => api.delete(`/groups/${groupId}/posts/${postId}`);
+export const fetchGroupComments  = (groupId, postId, cursor) => api.get(`/groups/${groupId}/posts/${postId}/comments`, { params: cursor ? { cursor } : {} });
+export const createGroupComment  = (groupId, postId, content) => api.post(`/groups/${groupId}/posts/${postId}/comments`, { content });
+export const deleteGroupComment  = (groupId, postId, commentId) => api.delete(`/groups/${groupId}/posts/${postId}/comments/${commentId}`);
+export const fetchGroupResources = (groupId, cursor)  => api.get(`/groups/${groupId}/resources`, { params: cursor ? { cursor } : {} });
+export const createGroupResource = (groupId, payload) => api.post(`/groups/${groupId}/resources`, payload);
+export const deleteGroupResource = (groupId, id)      => api.delete(`/groups/${groupId}/resources/${id}`);
 export const exportGroupIcs      = (groupId)           => api.get(`/groups/${groupId}/events.ics`, { responseType: 'blob' });
 export const updateEvent         = (eventId, payload)  => api.put(`/events/${eventId}`, payload);
 export const changePassword      = (payload)           => api.put('/auth/password', payload);

@@ -15,5 +15,6 @@ const EventSchema = new mongoose.Schema({
 });
 
 EventSchema.index({ group: 1, dueDate: 1 });
+EventSchema.index({ group: 1, title: 1 });
 
 module.exports = mongoose.model('Event', EventSchema);

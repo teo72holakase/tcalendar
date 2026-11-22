@@ -6,6 +6,7 @@ import ScheduleBlockModal from '../components/ScheduleBlockModal';
 import ScheduleCreateModal from '../components/ScheduleCreateModal';
 import ScheduleGrid from '../components/ScheduleGrid';
 import ScheduleSettings from '../components/ScheduleSettings';
+import LoadingScreen from '../components/LoadingScreen';
 import { useAuth } from '../contexts/AuthContext';
 import { useGroup } from '../contexts/GroupContext';
 import {
@@ -377,6 +378,8 @@ const SchedulesPage = () => {
     }
   };
 
+  if (loading) return <LoadingScreen />;
+
   return (
     <div className="min-h-dvh">
       <Header />
@@ -398,9 +401,7 @@ const SchedulesPage = () => {
           </div>
         )}
 
-        {loading ? (
-          <div className="card flex min-h-56 items-center justify-center gap-3 p-8 text-muted"><span className="load-ring" aria-hidden="true" /> Cargando tus horarios</div>
-        ) : !schedules.length ? (
+        {!schedules.length ? (
           <section aria-labelledby="schedule-empty-title" className="space-y-5">
             <div className="card flex flex-col items-center gap-3 p-8 text-center sm:p-12">
               <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-accent-soft text-accent-text"><Clock3 size={27} aria-hidden="true" /></span>

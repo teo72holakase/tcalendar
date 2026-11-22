@@ -11,6 +11,8 @@ import EventDetailsModal from '../components/EventDetailsModal';
 import InviteMemberModal from '../components/InviteMemberModal';
 import CreateInviteModal from '../components/CreateInviteModal';
 import DeleteGroupModal from '../components/DeleteGroupModal';
+import GroupForum from '../components/GroupForum';
+import GroupResources from '../components/GroupResources';
 import { useAuth } from '../contexts/AuthContext';
 import { useGroup } from '../contexts/GroupContext';
 import { exportGroupIcs } from '../services/api';
@@ -28,6 +30,7 @@ const GroupPage = () => {
   } = useGroup();
 
   const [view, setView] = useState('agenda');
+  const [tab, setTab] = useState('calendar');
   const [eventModal, setEventModal] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [linkOpen, setLinkOpen] = useState(false);
@@ -40,6 +43,7 @@ const GroupPage = () => {
 
   useEffect(() => {
     resetGroupData();
+    setTab('calendar');
     loadMembers(groupId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [groupId]);
@@ -134,16 +138,23 @@ const GroupPage = () => {
             <h1 className="break-words font-display text-4xl font-extrabold sm:text-5xl">{group?.name || 'Grupo'}</h1>
             {group?.description && <p className="mt-2 max-w-2xl text-lg text-muted">{group.description}</p>}
           </div>
-          <a href="#miembros" className="flex items-center gap-3 rounded-full py-1 pr-1 text-muted hover:text-ink" aria-label={`${members.length} miembros, ir a la lista`}>
+          <button type="button" onClick={() => setTab('calendar')} className="flex items-center gap-3 rounded-full py-1 pr-1 text-muted hover:text-ink" aria-label={`${members.length} miembros, ir a la lista`}>
             <AvatarStack members={members} creatorId={creatorId} max={5} size={38} />
-          </a>
+          </button>
         </div>
 
         {(message || error) && (
           <div role={error ? 'alert' : 'status'} className={`mb-5 rounded-2xl p-4 text-sm font-medium ${error ? 'bg-danger-soft text-danger' : 'bg-accent-soft text-accent-text'}`}>{error || message}</div>
         )}
 
-        <div className="grid items-start gap-8 lg:grid-cols-[1fr_21rem]">
+        <div className="mb-6 flex gap-2 overflow-x-auto border-b border-line" role="tablist" aria-label="Secciones del grupo">
+          {[['calendar', 'Calendario'], ['forum', 'Foro'], ['resources', 'Recursos']].map(([id, label]) => (
+            <button key={id} id={`group-tab-${id}`} type="button" role="tab" aria-selected={tab === id} aria-controls={`group-panel-${id}`} onClick={() => setTab(id)} className={`min-h-12 shrink-0 border-b-2 px-4 font-semibold transition ${tab === id ? 'border-accent text-ink' : 'border-transparent text-muted hover:text-ink'}`}>{label}</button>
+          ))}
+        </div>
+
+        {tab === 'calendar' && (
+        <div id="group-panel-calendar" role="tabpanel" aria-labelledby="group-tab-calendar" className="grid items-start gap-8 lg:grid-cols-[1fr_21rem]">
           <section aria-label="Calendario del grupo">
             <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
               <div role="group" aria-label="Vista" className="inline-flex rounded-2xl bg-surface-2 p-1">
@@ -166,11 +177,18 @@ const GroupPage = () => {
             onInvite={() => setInviteOpen(true)} onLink={() => setLinkOpen(true)} onRemove={kick} onDelete={() => setDeleteOpen(true)}
           />
         </div>
+        )}
+        {tab === 'forum' && (
+          <div id="group-panel-forum" role="tabpanel" aria-labelledby="group-tab-forum"><GroupForum key={groupId} groupId={groupId} members={members} currentUserId={myId} isCreator={isCreator} isAdmin={Boolean(user?.isAdmin)} /></div>
+        )}
+        {tab === 'resources' && (
+          <div id="group-panel-resources" role="tabpanel" aria-labelledby="group-tab-resources"><GroupResources key={groupId} groupId={groupId} currentUserId={myId} isCreator={isCreator} isAdmin={Boolean(user?.isAdmin)} /></div>
+        )}
       </main>
 
-      <button type="button" onClick={() => openNew()} aria-label="Nuevo evento" className="btn btn-primary fixed right-5 z-30 h-14 w-14 rounded-full p-0 shadow-xl sm:hidden" style={{ bottom: 'calc(1.25rem + env(safe-area-inset-bottom))' }}>
+      {tab === 'calendar' && <button type="button" onClick={() => openNew()} aria-label="Nuevo evento" className="btn btn-primary fixed right-5 z-30 h-14 w-14 rounded-full p-0 shadow-xl sm:hidden" style={{ bottom: 'calc(1.25rem + env(safe-area-inset-bottom))' }}>
         <Plus size={26} aria-hidden="true" />
-      </button>
+      </button>}
 
       <EventFormModal open={eventModal} onClose={closeEvent} onSave={save} loading={loading} error={eventError} initialData={editingEvent || { dueDate: selectedDate }} />
       <EventDetailsModal

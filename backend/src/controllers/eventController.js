@@ -1,8 +1,10 @@
 const Event = require('../models/Event');
 const Group = require('../models/Group');
+const mongoose = require('mongoose');
 const { buildIcs } = require('../utils/ics');
 
 const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
+const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 // El creador del evento o el creador del grupo pueden modificarlo/borrarlo (igual que muestra la UI).
 const canManageEvent = async (event, userId) => {
@@ -136,10 +138,18 @@ const getGroupEvents = async (req, res) => {
       return res.status(400).json({ message: 'Rango de fechas no válido' });
     }
     if (Object.keys(range).length) filter.dueDate = range;
+    const search = typeof req.query.q === 'string' ? req.query.q.trim().slice(0, 60) : '';
+    if (search) {
+      const matches = [{ title: { $regex: `^${escapeRegex(search)}` } }];
+      if (/^[a-f\d]{24}$/i.test(search)) matches.push({ _id: new mongoose.Types.ObjectId(search) });
+      filter.$or = matches;
+    }
 
-    const events = await Event.find(filter)
+    let query = Event.find(filter)
       .populate('createdBy', 'username')
       .sort({ dueDate: 1 });
+    if (search) query = query.limit(8);
+    const events = await query;
 
     res.json(events);
   } catch (error) {

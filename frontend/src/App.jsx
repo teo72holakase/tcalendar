@@ -15,7 +15,7 @@ const SchedulesPage = lazy(() => import('./pages/SchedulesPage'));
 function ProtectedRoute({ children }) {
   const { user, initialized } = useAuth();
   const { groupsLoaded, error, loadGroups } = useGroup();
-  if (!initialized) return null; // esperar a leer el localStorage antes de decidir
+  if (!initialized) return <LoadingScreen />;
   if (!user) return <Navigate to="/login" replace />;
   // Una sola pantalla de carga para cualquier ruta privada: nunca se ve una página a medias.
   if (!groupsLoaded) return <LoadingScreen error={error} onRetry={() => loadGroups()} />;
@@ -34,7 +34,7 @@ function AppShell() {
         <Route path="/invite/:token" element={<InvitePage />} />
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/group/:groupId" element={<ProtectedRoute><GroupPage /></ProtectedRoute>} />
-        <Route path="/schedules" element={<ProtectedRoute><Suspense fallback={<div role="status" className="flex min-h-dvh items-center justify-center gap-3 text-muted"><span className="load-ring" aria-hidden="true" /> Cargando horarios</div>}><SchedulesPage /></Suspense></ProtectedRoute>} />
+        <Route path="/schedules" element={<ProtectedRoute><Suspense fallback={<LoadingScreen />}><SchedulesPage /></Suspense></ProtectedRoute>} />
       </Routes>
     </>
   );
