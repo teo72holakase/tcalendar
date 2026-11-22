@@ -31,7 +31,9 @@ const renderInline = (text, keyPrefix, { eventRefs = {}, resourceRefs = {}, onEv
       const url = token.replace(/[.,!?]+$/, '');
       parts.push(<a key={`${keyPrefix}-${index}`} href={url} target="_blank" rel="noopener noreferrer" className="font-semibold text-accent-text underline break-all">{url}</a>);
       if (url.length < token.length) parts.push(token.slice(url.length));
-    } else if (token.startsWith('**') || token.startsWith('__')) {
+    } else if (token.startsWith('__')) {
+      parts.push(<u key={`${keyPrefix}-${index}`}>{token.slice(2, -2)}</u>);
+    } else if (token.startsWith('**')) {
       parts.push(<strong key={`${keyPrefix}-${index}`}>{token.slice(2, -2)}</strong>);
     } else if (token.startsWith('*')) {
       parts.push(<em key={`${keyPrefix}-${index}`}>{token.slice(1, -1)}</em>);
@@ -60,8 +62,24 @@ const renderInline = (text, keyPrefix, { eventRefs = {}, resourceRefs = {}, onEv
   return parts;
 };
 
-const GroupRichText = ({ content, eventRefs, resourceRefs, onEventClick, interactiveMentions = true }) => {
+const GroupRichText = ({ content, eventRefs, resourceRefs, onEventClick, interactiveMentions = true, compact = false }) => {
   const text = String(content || '');
+  if (compact) {
+    return (
+      <div className="break-words leading-6">
+        {text.split('\n').map((line, index) => {
+          let contentLine = line;
+          let className = 'min-h-6';
+          if (/^###\s/.test(line)) { contentLine = line.slice(4); className += ' font-semibold'; }
+          else if (/^##\s/.test(line)) { contentLine = line.slice(3); className += ' text-lg font-bold'; }
+          else if (/^#\s/.test(line)) { contentLine = line.slice(2); className += ' text-xl font-bold'; }
+          else if (/^[-*]\s/.test(line)) { contentLine = `• ${line.slice(2)}`; className += ' pl-2'; }
+          else if (/^>\s?/.test(line)) { contentLine = line.replace(/^>\s?/, ''); className += ' border-l-2 border-line pl-2 text-muted'; }
+          return <div key={index} className={className}>{renderInline(contentLine, `preview-${index}`, { eventRefs, resourceRefs, onEventClick, interactiveMentions })}</div>;
+        })}
+      </div>
+    );
+  }
   const previews = previewsFor(text);
   return (
   <div className="space-y-3 break-words">

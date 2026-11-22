@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { AtSign, LoaderCircle, MessageCircle, MoreHorizontal, Send, Trash2 } from 'lucide-react';
+import { AtSign, LoaderCircle, MessageCircle, Send, Trash2 } from 'lucide-react';
 import {
   createGroupComment, createGroupPost, deleteGroupComment, deleteGroupPost,
   fetchGroupComments, fetchGroupEvents, fetchGroupPosts, searchGroupResources,
@@ -12,6 +12,7 @@ const authorName = (author) => author?.username || 'Miembro';
 
 function MessageComposer({ groupId, members, value, onChange, onSubmit, disabled, placeholder, buttonLabel, maxLength = 4000, onEventClick, idSuffix = '' }) {
   const textarea = useRef(null);
+  const preview = useRef(null);
   const inputId = idSuffix || placeholder.replace(/\W+/g, '-');
   const [suggestion, setSuggestion] = useState(null);
   const [eventOptions, setEventOptions] = useState([]);
@@ -92,11 +93,17 @@ function MessageComposer({ groupId, members, value, onChange, onSubmit, disabled
   return (
     <form onSubmit={onSubmit} className="space-y-2">
       <label className="sr-only" htmlFor={inputId}>Mensaje</label>
-      <div className="relative">
+      <div className="group relative">
+        <div ref={preview} aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 overflow-hidden rounded-[inherit] border border-transparent bg-surface-2 px-4 py-[0.8rem] text-ink group-focus-within:bg-surface">
+          {value
+            ? <GroupRichText content={value} eventRefs={eventRefs} resourceRefs={resourceRefs} onEventClick={onEventClick} interactiveMentions={false} compact />
+            : <span className="text-muted">{placeholder}</span>}
+        </div>
         <textarea
           ref={textarea}
           id={inputId}
-          className="field min-h-24"
+          className="field relative z-10 min-h-24 !bg-transparent !text-transparent caret-ink placeholder:text-transparent selection:bg-accent/20"
+          style={{ WebkitTextFillColor: 'transparent' }}
           maxLength={maxLength}
           value={value}
           onChange={(event) => {
@@ -123,7 +130,10 @@ function MessageComposer({ groupId, members, value, onChange, onSubmit, disabled
             }
             if (suggestion && event.key === 'Escape') setSuggestion(null);
           }}
-          placeholder={placeholder}
+          onScroll={(event) => {
+            if (preview.current) preview.current.scrollTop = event.currentTarget.scrollTop;
+          }}
+          placeholder=""
           disabled={disabled}
           required
         />
@@ -169,12 +179,6 @@ function MessageComposer({ groupId, members, value, onChange, onSubmit, disabled
         <p className="text-xs text-muted">Markdown, @ menciones, /eventos y !recursos · {value.length}/{maxLength}</p>
         <button type="submit" className="btn btn-primary btn-sm" disabled={disabled || !value.trim()}><Send size={15} aria-hidden="true" /> {buttonLabel}</button>
       </div>
-      {value.trim() && (
-        <div className="rounded-2xl border border-line bg-surface p-4" aria-label="Vista previa en vivo">
-          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Vista previa</p>
-          <GroupRichText content={value} eventRefs={eventRefs} resourceRefs={resourceRefs} onEventClick={onEventClick} interactiveMentions={false} />
-        </div>
-      )}
     </form>
   );
 }
@@ -182,8 +186,7 @@ function MessageComposer({ groupId, members, value, onChange, onSubmit, disabled
 function CommentItem({ groupId, postId, comment, members, currentUserId, canModerate, onEventClick, onDeleted, depth = 0 }) {
   const [replies, setReplies] = useState([]);
   const [cursor, setCursor] = useState(null);
-  const [loaded, setLoaded] = useState(false);
-  const [expanded, setExpanded] = useState(false);
+  const [replying, setReplying] = useState(false);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [content, setContent] = useState('');
@@ -197,7 +200,6 @@ function CommentItem({ groupId, postId, comment, members, currentUserId, canMode
       const { data } = await fetchGroupComments(groupId, postId, nextCursor, comment._id);
       setReplies((current) => nextCursor ? [...current, ...data.items] : data.items);
       setCursor(data.nextCursor);
-      setLoaded(true);
     } catch (requestError) {
       setError(errorText(requestError, 'No se pudieron cargar las respuestas'));
     } finally {
@@ -205,10 +207,11 @@ function CommentItem({ groupId, postId, comment, members, currentUserId, canMode
     }
   };
 
-  const toggleReply = async () => {
-    setExpanded((current) => !current);
-    if (!loaded) await loadReplies();
-  };
+  useEffect(() => {
+    loadReplies();
+    // Load once when the comment appears so replies remain visible.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groupId, postId, comment._id]);
 
   const submit = async (event) => {
     event.preventDefault();
@@ -218,8 +221,7 @@ function CommentItem({ groupId, postId, comment, members, currentUserId, canMode
       const { data } = await createGroupComment(groupId, postId, content.trim(), comment._id);
       setReplies((current) => [data, ...current]);
       setContent('');
-      setExpanded(true);
-      setLoaded(true);
+      setReplying(false);
     } catch (requestError) {
       setError(errorText(requestError, 'No se pudo enviar la respuesta'));
     } finally {
@@ -247,15 +249,16 @@ function CommentItem({ groupId, postId, comment, members, currentUserId, canMode
         </div>
       </div>
       <div className="text-sm"><GroupRichText content={comment.content} eventRefs={comment.eventRefs} resourceRefs={comment.resourceRefs} onEventClick={onEventClick} /></div>
-      {depth < 4 && <button type="button" onClick={toggleReply} aria-expanded={expanded} disabled={loading} className="mt-2 min-h-10 text-sm font-semibold text-muted hover:text-ink disabled:opacity-50">{expanded ? 'Ocultar respuestas' : 'Responder'}</button>}
-      {expanded && depth < 4 && (
+      {depth < 4 && <button type="button" onClick={() => setReplying((current) => !current)} aria-expanded={replying} className="mt-2 min-h-10 text-sm font-semibold text-muted hover:text-ink">{replying ? 'Cancelar respuesta' : 'Responder'}</button>}
+      {replying && depth < 4 && (
         <div className="mt-2 space-y-3">
           <MessageComposer groupId={groupId} members={members} value={content} onChange={setContent} onSubmit={submit} disabled={sending} placeholder={`Responder a ${authorName(comment.author)}…`} buttonLabel="Enviar respuesta" maxLength={2000} onEventClick={onEventClick} idSuffix={`reply-${comment._id}`} />
           {error && <p role="alert" className="rounded-xl bg-danger-soft p-3 text-sm text-danger">{error}</p>}
         </div>
       )}
-      {expanded && loading && !replies.length && <p role="status" className="mt-3 text-sm text-muted">Cargando respuestas…</p>}
-      {expanded && replies.length > 0 && (
+      {loading && !replies.length && <p role="status" className="mt-3 text-sm text-muted">Cargando respuestas…</p>}
+      {!loading && error && !replying && <div role="alert" className="mt-3 flex items-center gap-3 text-sm text-danger"><span>{error}</span><button type="button" onClick={() => loadReplies()} className="font-semibold underline">Reintentar</button></div>}
+      {replies.length > 0 && (
         <div className="mt-3 space-y-3">
           {replies.map((reply) => (
             <CommentItem
@@ -276,8 +279,7 @@ function CommentItem({ groupId, postId, comment, members, currentUserId, canMode
           ))}
         </div>
       )}
-      {expanded && error && !content && <p role="alert" className="mt-3 rounded-xl bg-danger-soft p-3 text-sm text-danger">{error}</p>}
-      {expanded && cursor && <button type="button" onClick={() => loadReplies(cursor)} disabled={loading} className="btn btn-quiet btn-sm mt-3">{loading ? 'Cargando…' : 'Ver respuestas anteriores'}</button>}
+      {cursor && <button type="button" onClick={() => loadReplies(cursor)} disabled={loading} className="btn btn-quiet btn-sm mt-3">{loading ? 'Cargando…' : 'Ver respuestas anteriores'}</button>}
     </article>
   );
 }
@@ -336,6 +338,7 @@ function CommentThread({ groupId, post, members, currentUserId, canModerate, onE
       <MessageComposer groupId={groupId} members={members} value={content} onChange={setContent} onSubmit={submit} disabled={sending} placeholder="Dejá un comentario…" buttonLabel="Comentar" maxLength={2000} onEventClick={onEventClick} />
       {error && <p role="alert" className="rounded-xl bg-danger-soft p-3 text-sm text-danger">{error}</p>}
       {loading && !comments.length && <p className="text-sm text-muted">Cargando comentarios…</p>}
+      {!loading && !comments.length && !error && <p className="text-sm text-muted">Todavía no hay comentarios</p>}
       <div className="space-y-3">
         {comments.map((comment) => (
           <CommentItem
@@ -364,7 +367,7 @@ export default function GroupForum({ groupId, members, currentUserId, isCreator,
   const [sending, setSending] = useState(false);
   const [content, setContent] = useState('');
   const [error, setError] = useState('');
-  const [activePost, setActivePost] = useState('');
+  const [hiddenComments, setHiddenComments] = useState(() => new Set());
   const canModerate = isCreator || isAdmin;
 
   const load = async (nextCursor = '') => {
@@ -408,6 +411,11 @@ export default function GroupForum({ groupId, members, currentUserId, isCreator,
     try {
       await deleteGroupPost(groupId, post._id);
       setPosts((current) => current.filter((item) => item._id !== post._id));
+      setHiddenComments((current) => {
+        const next = new Set(current);
+        next.delete(post._id);
+        return next;
+      });
     } catch (requestError) {
       setError(errorText(requestError, 'No se pudo borrar el mensaje'));
     }
@@ -435,10 +443,17 @@ export default function GroupForum({ groupId, members, currentUserId, isCreator,
               {removable && <button type="button" onClick={() => remove(post)} aria-label="Borrar mensaje" className="flex h-10 w-10 items-center justify-center rounded-full text-muted hover:bg-danger-soft hover:text-danger"><Trash2 size={17} aria-hidden="true" /></button>}
             </header>
             <div className="text-[0.98rem]"><GroupRichText content={post.content} eventRefs={post.eventRefs} resourceRefs={post.resourceRefs} onEventClick={onEventClick} /></div>
-            <button type="button" onClick={() => setActivePost((current) => current === post._id ? '' : post._id)} aria-expanded={activePost === post._id} className="mt-4 inline-flex min-h-10 items-center gap-2 text-sm font-semibold text-muted hover:text-ink">
-              <MoreHorizontal size={17} aria-hidden="true" /> {activePost === post._id ? 'Ocultar comentarios' : 'Comentar o ver conversación'}
+            <button type="button" onClick={() => setHiddenComments((current) => {
+              const next = new Set(current);
+              if (next.has(post._id)) next.delete(post._id);
+              else next.add(post._id);
+              return next;
+            })} aria-expanded={!hiddenComments.has(post._id)} className="mt-4 inline-flex min-h-10 items-center gap-2 text-sm font-semibold text-muted hover:text-ink">
+              <MessageCircle size={17} aria-hidden="true" /> {hiddenComments.has(post._id) ? 'Mostrar comentarios' : 'Ocultar comentarios'}
             </button>
-            {activePost === post._id && <CommentThread key={post._id} groupId={groupId} post={post} members={members} currentUserId={currentUserId} canModerate={canModerate} onEventClick={onEventClick} />}
+            <div hidden={hiddenComments.has(post._id)}>
+              <CommentThread key={post._id} groupId={groupId} post={post} members={members} currentUserId={currentUserId} canModerate={canModerate} onEventClick={onEventClick} />
+            </div>
           </article>
         );
       })}
