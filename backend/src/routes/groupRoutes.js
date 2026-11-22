@@ -24,6 +24,7 @@ router.get('/:groupId/posts/:postId/comments', groupContent.getComments);
 router.post('/:groupId/posts/:postId/comments', groupContent.createComment);
 router.delete('/:groupId/posts/:postId/comments/:commentId', groupContent.deleteComment);
 router.get('/:groupId/resources', groupContent.getResources);
+router.patch('/:groupId/resources/:resourceId/pin', groupContent.setResourcePinned);
 router.post('/:groupId/resources', groupContent.createResource);
 router.delete('/:groupId/resources/:resourceId', groupContent.deleteResource);
 

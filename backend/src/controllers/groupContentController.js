@@ -41,8 +41,8 @@ const attachMentions = async (items, groupId) => {
   }));
 };
 
-const getMemberGroup = async (groupId, user, res) => {
-  const group = await Group.findById(groupId).select('creator members');
+const getMemberGroup = async (groupId, user, res, fields = 'creator members') => {
+  const group = await Group.findById(groupId).select(fields);
   if (!group) {
     res.status(404).json({ message: 'Grupo no encontrado' });
     return null;
@@ -225,7 +225,8 @@ const deleteComment = async (req, res) => {
 
 const getResources = async (req, res) => {
   try {
-    if (!(await getMemberGroup(req.params.groupId, req.user, res))) return;
+    const group = await getMemberGroup(req.params.groupId, req.user, res, 'creator members pinnedResources');
+    if (!group) return;
     const query = { group: req.params.groupId };
     const search = typeof req.query.q === 'string' ? req.query.q.trim().slice(0, 60) : '';
     if (search) {
@@ -238,21 +239,74 @@ const getResources = async (req, res) => {
         .limit(8);
       return res.json(items);
     }
+    const pinnedIds = group.pinnedResources || [];
     if (req.query.cursor) {
       if (!mongoose.isValidObjectId(req.query.cursor)) return res.status(400).json({ message: 'Cursor no válido' });
-      query._id = { $lt: req.query.cursor };
+      query._id = { $lt: req.query.cursor, $nin: pinnedIds };
+    } else if (pinnedIds.length) {
+      query._id = { $nin: pinnedIds };
     }
-    const docs = await GroupResource.find(query)
-      .select('title description url fileType createdBy createdAt')
-      .populate('createdBy', 'username')
-      .sort({ _id: -1 })
-      .limit(PAGE_SIZE + 1);
+    const [pinnedDocs, docs] = await Promise.all([
+      pinnedIds.length ? GroupResource.find({ group: group._id, _id: { $in: pinnedIds } })
+        .select('title description url fileType createdBy createdAt')
+        .populate('createdBy', 'username')
+        .sort({ _id: -1 }) : [],
+      GroupResource.find(query)
+        .select('title description url fileType createdBy createdAt')
+        .populate('createdBy', 'username')
+        .sort({ _id: -1 })
+        .limit(PAGE_SIZE + 1),
+    ]);
     const hasMore = docs.length > PAGE_SIZE;
     const items = docs.slice(0, PAGE_SIZE);
-    res.json({ items, nextCursor: hasMore ? String(items.at(-1)._id) : null });
+    res.json({ pinnedItems: pinnedDocs, items, nextCursor: hasMore ? String(items.at(-1)._id) : null });
   } catch (error) {
     console.error('Error getGroupResources:', error);
     res.status(500).json({ message: 'Error al obtener recursos' });
+  }
+};
+
+const setResourcePinned = async (req, res) => {
+  try {
+    const group = await getMemberGroup(req.params.groupId, req.user, res, 'creator members pinnedResources');
+    if (!group) return;
+    if (!canModerate(group, req.user)) return res.status(403).json({ message: 'Solo el administrador del grupo puede fijar recursos' });
+    if (!mongoose.isValidObjectId(req.params.resourceId)) return res.status(400).json({ message: 'Recurso no válido' });
+    if (typeof req.body?.pinned !== 'boolean') return res.status(400).json({ message: 'Indicá si querés fijar o desfijar el recurso' });
+    const resource = await GroupResource.findOne({ _id: req.params.resourceId, group: group._id }).select('_id');
+    if (!resource) return res.status(404).json({ message: 'Recurso no encontrado' });
+
+    if (req.body.pinned) {
+      const currentIds = group.pinnedResources || [];
+      if (!currentIds.some((id) => id.toString() === resource._id.toString())) {
+        const update = await Group.updateOne({
+          _id: group._id,
+          pinnedResources: { $ne: resource._id },
+          $expr: { $lt: [{ $size: { $ifNull: ['$pinnedResources', []] } }, 4] },
+        }, { $addToSet: { pinnedResources: resource._id } });
+        if (!update.modifiedCount) {
+          const current = await Group.findById(group._id).select('pinnedResources');
+          if (!(current?.pinnedResources || []).some((id) => id.toString() === resource._id.toString())) {
+            return res.status(409).json({ message: 'El grupo ya tiene 4 recursos fijados' });
+          }
+        }
+      }
+    } else {
+      await Group.updateOne({ _id: group._id }, { $pull: { pinnedResources: resource._id } });
+    }
+
+    const current = await Group.findById(group._id).select('pinnedResources');
+    const pinnedIds = current?.pinnedResources || [];
+    const pinnedItems = pinnedIds.length
+      ? await GroupResource.find({ group: group._id, _id: { $in: pinnedIds } })
+        .select('title description url fileType createdBy createdAt')
+        .populate('createdBy', 'username')
+        .sort({ _id: -1 })
+      : [];
+    res.json({ pinnedItems });
+  } catch (error) {
+    console.error('Error setGroupResourcePinned:', error);
+    res.status(500).json({ message: 'No se pudo actualizar el recurso fijado' });
   }
 };
 
@@ -296,6 +350,7 @@ const deleteResource = async (req, res) => {
       return res.status(403).json({ message: 'Solo quien lo agregó, el creador o un administrador puede borrarlo' });
     }
     await resource.deleteOne();
+    await Group.updateOne({ _id: group._id }, { $pull: { pinnedResources: resource._id } });
     res.json({ message: 'Recurso eliminado' });
   } catch (error) {
     console.error('Error deleteGroupResource:', error);
@@ -306,6 +361,6 @@ const deleteResource = async (req, res) => {
 module.exports = {
   getPosts, createPost, deletePost,
   getComments, createComment, deleteComment,
-  getResources, createResource, deleteResource,
+  getResources, setResourcePinned, createResource, deleteResource,
   validUrl, attachMentions,
 };

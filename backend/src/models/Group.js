@@ -21,6 +21,7 @@ const GroupSchema = new mongoose.Schema({
     required: true,
   },
   members: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true }],
+  pinnedResources: [{ type: mongoose.Schema.Types.ObjectId, ref: 'GroupResource' }],
   color: { type: String, default: '#3B82F6' },
   // FIX: era required:true sin default — crasheaba si no se pasaba
   inviteCode: {

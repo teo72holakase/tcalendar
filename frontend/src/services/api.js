@@ -57,6 +57,7 @@ export const fetchGroupResources = (groupId, cursor)  => api.get(`/groups/${grou
 export const searchGroupResources = (groupId, query) => api.get(`/groups/${groupId}/resources`, { params: { q: query } });
 export const createGroupResource = (groupId, payload) => api.post(`/groups/${groupId}/resources`, payload);
 export const deleteGroupResource = (groupId, id)      => api.delete(`/groups/${groupId}/resources/${id}`);
+export const setGroupResourcePinned = (groupId, id, pinned) => api.patch(`/groups/${groupId}/resources/${id}/pin`, { pinned });
 export const exportGroupIcs      = (groupId)           => api.get(`/groups/${groupId}/events.ics`, { responseType: 'blob' });
 export const updateEvent         = (eventId, payload)  => api.put(`/events/${eventId}`, payload);
 export const changePassword      = (payload)           => api.put('/auth/password', payload);

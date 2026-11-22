@@ -40,7 +40,8 @@ const EventFormModal = ({ open, onClose, onSave, loading, error, initialData, gr
     setResourceError('');
     try {
       const { data } = await fetchGroupResources(groupId, cursor);
-      setAvailableResources((current) => cursor ? [...current, ...data.items] : data.items);
+      const items = cursor ? data.items : [...(data.pinnedItems || []), ...data.items];
+      setAvailableResources((current) => cursor ? [...current, ...items] : items);
       setResourceCursor(data.nextCursor);
       setResourcesLoaded(true);
     } catch (requestError) {
