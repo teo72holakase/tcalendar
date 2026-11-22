@@ -43,8 +43,8 @@ export const AvatarStack = ({ members = [], creatorId, max = 4, size = 34 }) => 
   return (
     <span className="inline-flex items-center">
       {shown.map((m, i) => (
-        <span key={m._id} className="rounded-full ring-2 ring-surface" style={{ marginLeft: i ? -size * 0.28 : 0 }}>
-          <Avatar name={m.username} avatar={m.avatar} size={size} creator={String(m._id) === String(creatorId)} />
+        <span key={m._id} className="inline-flex rounded-full ring-2 ring-surface" style={{ marginLeft: i ? -size * 0.28 : 0 }}>
+          <Avatar name={m.username} avatar={m.avatar} size={size} creator={String(m._id) === String(creatorId)} className="translate-y-px" />
         </span>
       ))}
       {extra > 0 && (

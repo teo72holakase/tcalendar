@@ -50,8 +50,8 @@ export const fetchGroupEvents    = (groupId, params)  => api.get(`/groups/${grou
 export const fetchGroupPosts     = (groupId, cursor)  => api.get(`/groups/${groupId}/posts`, { params: cursor ? { cursor } : {} });
 export const createGroupPost     = (groupId, content) => api.post(`/groups/${groupId}/posts`, { content });
 export const deleteGroupPost     = (groupId, postId)  => api.delete(`/groups/${groupId}/posts/${postId}`);
-export const fetchGroupComments  = (groupId, postId, cursor) => api.get(`/groups/${groupId}/posts/${postId}/comments`, { params: cursor ? { cursor } : {} });
-export const createGroupComment  = (groupId, postId, content) => api.post(`/groups/${groupId}/posts/${postId}/comments`, { content });
+export const fetchGroupComments  = (groupId, postId, cursor, parentId) => api.get(`/groups/${groupId}/posts/${postId}/comments`, { params: { ...(cursor ? { cursor } : {}), ...(parentId ? { parentId } : {}) } });
+export const createGroupComment  = (groupId, postId, content, parentId) => api.post(`/groups/${groupId}/posts/${postId}/comments`, { content, ...(parentId ? { parentId } : {}) });
 export const deleteGroupComment  = (groupId, postId, commentId) => api.delete(`/groups/${groupId}/posts/${postId}/comments/${commentId}`);
 export const fetchGroupResources = (groupId, cursor)  => api.get(`/groups/${groupId}/resources`, { params: cursor ? { cursor } : {} });
 export const searchGroupResources = (groupId, query) => api.get(`/groups/${groupId}/resources`, { params: { q: query } });

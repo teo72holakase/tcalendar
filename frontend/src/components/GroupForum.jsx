@@ -10,14 +10,14 @@ const errorText = (error, fallback) => error.response?.data?.message || fallback
 const userIdOf = (value) => String(value?._id ?? value?.id ?? value ?? '');
 const authorName = (author) => author?.username || 'Miembro';
 
-function MessageComposer({ groupId, members, value, onChange, onSubmit, disabled, placeholder, buttonLabel, maxLength = 4000, onEventClick }) {
+function MessageComposer({ groupId, members, value, onChange, onSubmit, disabled, placeholder, buttonLabel, maxLength = 4000, onEventClick, idSuffix = '' }) {
   const textarea = useRef(null);
+  const inputId = idSuffix || placeholder.replace(/\W+/g, '-');
   const [suggestion, setSuggestion] = useState(null);
   const [eventOptions, setEventOptions] = useState([]);
   const [resourceOptions, setResourceOptions] = useState([]);
   const [eventRefs, setEventRefs] = useState({});
   const [resourceRefs, setResourceRefs] = useState({});
-  const [preview, setPreview] = useState(false);
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState('');
   const requestId = useRef(0);
@@ -53,7 +53,7 @@ function MessageComposer({ groupId, members, value, onChange, onSubmit, disabled
         if (sequence === requestId.current) {
           if (suggestion.type === '/') setEventOptions([]);
           else setResourceOptions([]);
-          setSearchError('No se pudieron buscar eventos.');
+          setSearchError(suggestion.type === '/' ? 'No se pudieron buscar eventos.' : 'No se pudieron buscar recursos.');
         }
       } finally {
         if (sequence === requestId.current) setSearching(false);
@@ -85,23 +85,21 @@ function MessageComposer({ groupId, members, value, onChange, onSubmit, disabled
 
   useEffect(() => {
     if (value) return;
-    setPreview(false);
     setEventRefs({});
     setResourceRefs({});
   }, [value]);
 
   return (
     <form onSubmit={onSubmit} className="space-y-2">
-      <label className="sr-only" htmlFor={placeholder.replace(/\W+/g, '-')}>Mensaje</label>
+      <label className="sr-only" htmlFor={inputId}>Mensaje</label>
       <div className="relative">
         <textarea
           ref={textarea}
-          id={placeholder.replace(/\W+/g, '-')}
+          id={inputId}
           className="field min-h-24"
           maxLength={maxLength}
           value={value}
           onChange={(event) => {
-            setPreview(false);
             onChange(event.target.value);
             cursorRef.current = event.target.selectionStart;
             updateSuggestion(event.target.value, event.target.selectionStart);
@@ -115,6 +113,14 @@ function MessageComposer({ groupId, members, value, onChange, onSubmit, disabled
             updateSuggestion(value, event.currentTarget.selectionStart);
           }}
           onKeyDown={(event) => {
+            if (event.key === 'Tab' && suggestion && options.length > 0) {
+              event.preventDefault();
+              cursorRef.current = event.currentTarget.selectionStart;
+              if (suggestion.type === '@') insertSuggestion(`@${options[0].username}`);
+              else if (suggestion.type === '/') insertSuggestion(`/${options[0]._id}`, 'event', options[0]);
+              else insertSuggestion(`!${options[0]._id}`, 'resource', options[0]);
+              return;
+            }
             if (suggestion && event.key === 'Escape') setSuggestion(null);
           }}
           placeholder={placeholder}
@@ -160,14 +166,119 @@ function MessageComposer({ groupId, members, value, onChange, onSubmit, disabled
         )}
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-3">
-          <p className="text-xs text-muted">Markdown, @ menciones, /eventos y !recursos · {value.length}/{maxLength}</p>
-          <button type="button" aria-pressed={preview} onClick={() => setPreview((current) => !current)} className="btn btn-quiet btn-sm">{preview ? 'Editar' : 'Vista previa'}</button>
-        </div>
+        <p className="text-xs text-muted">Markdown, @ menciones, /eventos y !recursos · {value.length}/{maxLength}</p>
         <button type="submit" className="btn btn-primary btn-sm" disabled={disabled || !value.trim()}><Send size={15} aria-hidden="true" /> {buttonLabel}</button>
       </div>
-      {preview && <div className="card min-h-20 p-4" aria-label="Vista previa del mensaje"><GroupRichText content={value} eventRefs={eventRefs} resourceRefs={resourceRefs} onEventClick={onEventClick} interactiveMentions={false} /></div>}
+      {value.trim() && (
+        <div className="rounded-2xl border border-line bg-surface p-4" aria-label="Vista previa en vivo">
+          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Vista previa</p>
+          <GroupRichText content={value} eventRefs={eventRefs} resourceRefs={resourceRefs} onEventClick={onEventClick} interactiveMentions={false} />
+        </div>
+      )}
     </form>
+  );
+}
+
+function CommentItem({ groupId, postId, comment, members, currentUserId, canModerate, onEventClick, onDeleted, depth = 0 }) {
+  const [replies, setReplies] = useState([]);
+  const [cursor, setCursor] = useState(null);
+  const [loaded, setLoaded] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [content, setContent] = useState('');
+  const [error, setError] = useState('');
+  const removable = canModerate || userIdOf(comment.author) === currentUserId;
+
+  const loadReplies = async (nextCursor = '') => {
+    setLoading(true);
+    setError('');
+    try {
+      const { data } = await fetchGroupComments(groupId, postId, nextCursor, comment._id);
+      setReplies((current) => nextCursor ? [...current, ...data.items] : data.items);
+      setCursor(data.nextCursor);
+      setLoaded(true);
+    } catch (requestError) {
+      setError(errorText(requestError, 'No se pudieron cargar las respuestas'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleReply = async () => {
+    setExpanded((current) => !current);
+    if (!loaded) await loadReplies();
+  };
+
+  const submit = async (event) => {
+    event.preventDefault();
+    setSending(true);
+    setError('');
+    try {
+      const { data } = await createGroupComment(groupId, postId, content.trim(), comment._id);
+      setReplies((current) => [data, ...current]);
+      setContent('');
+      setExpanded(true);
+      setLoaded(true);
+    } catch (requestError) {
+      setError(errorText(requestError, 'No se pudo enviar la respuesta'));
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const remove = async () => {
+    if (!window.confirm('¿Borrar este comentario?')) return;
+    try {
+      await deleteGroupComment(groupId, postId, comment._id);
+      await onDeleted();
+    } catch (requestError) {
+      setError(errorText(requestError, 'No se pudo borrar el comentario'));
+    }
+  };
+
+  return (
+    <article className={`rounded-2xl bg-surface-2 p-3 ${depth ? 'ml-4 border-l-2 border-accent/40 sm:ml-7' : ''}`}>
+      <div className="mb-1 flex items-center justify-between gap-2 text-sm">
+        <span className="font-semibold">{authorName(comment.author)}</span>
+        <div className="flex items-center gap-2 text-xs text-muted">
+          <time dateTime={comment.createdAt}>{new Date(comment.createdAt).toLocaleString('es')}</time>
+          {removable && <button type="button" onClick={remove} aria-label="Borrar comentario" className="rounded-lg p-1 hover:text-danger"><Trash2 size={15} aria-hidden="true" /></button>}
+        </div>
+      </div>
+      <div className="text-sm"><GroupRichText content={comment.content} eventRefs={comment.eventRefs} resourceRefs={comment.resourceRefs} onEventClick={onEventClick} /></div>
+      {depth < 4 && <button type="button" onClick={toggleReply} aria-expanded={expanded} disabled={loading} className="mt-2 min-h-10 text-sm font-semibold text-muted hover:text-ink disabled:opacity-50">{expanded ? 'Ocultar respuestas' : 'Responder'}</button>}
+      {expanded && depth < 4 && (
+        <div className="mt-2 space-y-3">
+          <MessageComposer groupId={groupId} members={members} value={content} onChange={setContent} onSubmit={submit} disabled={sending} placeholder={`Responder a ${authorName(comment.author)}…`} buttonLabel="Enviar respuesta" maxLength={2000} onEventClick={onEventClick} idSuffix={`reply-${comment._id}`} />
+          {error && <p role="alert" className="rounded-xl bg-danger-soft p-3 text-sm text-danger">{error}</p>}
+        </div>
+      )}
+      {expanded && loading && !replies.length && <p role="status" className="mt-3 text-sm text-muted">Cargando respuestas…</p>}
+      {expanded && replies.length > 0 && (
+        <div className="mt-3 space-y-3">
+          {replies.map((reply) => (
+            <CommentItem
+              key={reply._id}
+              groupId={groupId}
+              postId={postId}
+              comment={reply}
+              members={members}
+              currentUserId={currentUserId}
+              canModerate={canModerate}
+              onEventClick={onEventClick}
+              onDeleted={async () => {
+                await loadReplies();
+                await onDeleted();
+              }}
+              depth={depth + 1}
+            />
+          ))}
+        </div>
+      )}
+      {expanded && error && !content && <p role="alert" className="mt-3 rounded-xl bg-danger-soft p-3 text-sm text-danger">{error}</p>}
+      {expanded && cursor && <button type="button" onClick={() => loadReplies(cursor)} disabled={loading} className="btn btn-quiet btn-sm mt-3">{loading ? 'Cargando…' : 'Ver respuestas anteriores'}</button>}
+    </article>
   );
 }
 
@@ -214,7 +325,7 @@ function CommentThread({ groupId, post, members, currentUserId, canModerate, onE
     if (!window.confirm('¿Borrar este comentario?')) return;
     try {
       await deleteGroupComment(groupId, post._id, comment._id);
-      setComments((current) => current.filter((item) => item._id !== comment._id));
+      await load();
     } catch (requestError) {
       setError(errorText(requestError, 'No se pudo borrar el comentario'));
     }
@@ -226,31 +337,30 @@ function CommentThread({ groupId, post, members, currentUserId, canModerate, onE
       {error && <p role="alert" className="rounded-xl bg-danger-soft p-3 text-sm text-danger">{error}</p>}
       {loading && !comments.length && <p className="text-sm text-muted">Cargando comentarios…</p>}
       <div className="space-y-3">
-        {comments.map((comment) => {
-          const removable = canModerate || userIdOf(comment.author) === currentUserId;
-          return (
-            <article key={comment._id} className="rounded-2xl bg-surface-2 p-3">
-              <div className="mb-1 flex items-center justify-between gap-2 text-sm">
-                <span className="font-semibold">{authorName(comment.author)}</span>
-                <div className="flex items-center gap-2 text-xs text-muted">
-                  <time dateTime={comment.createdAt}>{new Date(comment.createdAt).toLocaleString('es')}</time>
-                  {removable && <button type="button" onClick={() => remove(comment)} aria-label="Borrar comentario" className="rounded-lg p-1 hover:text-danger"><Trash2 size={15} aria-hidden="true" /></button>}
-                </div>
-              </div>
-              <div className="text-sm"><GroupRichText content={comment.content} eventRefs={comment.eventRefs} resourceRefs={comment.resourceRefs} onEventClick={onEventClick} /></div>
-            </article>
-          );
-        })}
+        {comments.map((comment) => (
+          <CommentItem
+            key={comment._id}
+            groupId={groupId}
+            postId={post._id}
+            comment={comment}
+            members={members}
+            currentUserId={currentUserId}
+            canModerate={canModerate}
+            onEventClick={onEventClick}
+            onDeleted={() => load()}
+          />
+        ))}
       </div>
       {cursor && <button type="button" onClick={() => load(cursor)} disabled={loading} className="btn btn-quiet btn-sm">{loading ? 'Cargando…' : 'Ver comentarios anteriores'}</button>}
     </div>
   );
 }
 
-export default function GroupForum({ groupId, members, currentUserId, isCreator, isAdmin, onEventClick }) {
+export default function GroupForum({ groupId, members, currentUserId, isCreator, isAdmin, onEventClick, active }) {
   const [posts, setPosts] = useState([]);
   const [cursor, setCursor] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const [sending, setSending] = useState(false);
   const [content, setContent] = useState('');
   const [error, setError] = useState('');
@@ -264,6 +374,7 @@ export default function GroupForum({ groupId, members, currentUserId, isCreator,
       const { data } = await fetchGroupPosts(groupId, nextCursor);
       setPosts((current) => nextCursor ? [...current, ...data.items] : data.items);
       setCursor(data.nextCursor);
+      setLoaded(true);
     } catch (requestError) {
       setError(errorText(requestError, 'No se pudo cargar el foro'));
     } finally {
@@ -271,7 +382,11 @@ export default function GroupForum({ groupId, members, currentUserId, isCreator,
     }
   };
 
-  useEffect(() => { load(); /* fetch only when the forum tab opens */ }, [groupId]);
+  useEffect(() => {
+    if (active && !loaded) load();
+    // Load once per group, on first visit, so switching tabs preserves the draft and avoids repeat reads.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active, groupId, loaded]);
 
   const submit = async (event) => {
     event.preventDefault();
@@ -303,7 +418,7 @@ export default function GroupForum({ groupId, members, currentUserId, isCreator,
       <div className="card p-4 sm:p-5">
         <h2 id="group-forum-title" className="mb-3 text-xl font-bold">Conversación del grupo</h2>
         <MessageComposer groupId={groupId} members={members} value={content} onChange={setContent} onSubmit={submit} disabled={sending} placeholder="Compartí una idea, consulta o actualización…" buttonLabel="Publicar" onEventClick={onEventClick} />
-        {error && <p role="alert" className="mt-3 rounded-xl bg-danger-soft p-3 text-sm text-danger">{error}</p>}
+        {error && <div role="alert" className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-danger-soft p-3 text-sm text-danger"><span>{error}</span><button type="button" onClick={() => load()} className="font-bold underline">Reintentar</button></div>}
       </div>
 
       {loading && !posts.length && <div role="status" className="card flex min-h-32 items-center justify-center gap-2 p-6 text-muted"><LoaderCircle size={18} className="animate-spin" aria-hidden="true" /> Cargando mensajes</div>}

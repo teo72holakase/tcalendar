@@ -51,5 +51,6 @@ test('la búsqueda de eventos limita resultados y trata los códigos como Object
   assert.equal(result.status, 200);
   assert.equal(limit, 8);
   assert.equal(queryFilter.$or[0].title.$regex, `^${code.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`);
+  assert.equal(queryFilter.$or[0].title.$options, 'i');
   assert.equal(String(queryFilter.$or[1]._id), code);
 });

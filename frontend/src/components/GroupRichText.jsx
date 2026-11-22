@@ -68,9 +68,9 @@ const GroupRichText = ({ content, eventRefs, resourceRefs, onEventClick, interac
     <div className="space-y-1">
     {text.split('\n').map((line, index) => {
       const key = `line-${index}`;
-      if (/^###\s/.test(line)) return <h4 key={key} className="font-bold">{renderInline(line.slice(4), key, { eventRefs, resourceRefs, onEventClick, interactiveMentions })}</h4>;
-      if (/^##\s/.test(line)) return <h3 key={key} className="font-bold">{renderInline(line.slice(3), key, { eventRefs, resourceRefs, onEventClick, interactiveMentions })}</h3>;
-      if (/^#\s/.test(line)) return <h2 key={key} className="font-bold">{renderInline(line.slice(2), key, { eventRefs, resourceRefs, onEventClick, interactiveMentions })}</h2>;
+      if (/^###\s/.test(line)) return <h5 key={key} className="text-base font-bold">{renderInline(line.slice(4), key, { eventRefs, resourceRefs, onEventClick, interactiveMentions })}</h5>;
+      if (/^##\s/.test(line)) return <h4 key={key} className="text-lg font-bold">{renderInline(line.slice(3), key, { eventRefs, resourceRefs, onEventClick, interactiveMentions })}</h4>;
+      if (/^#\s/.test(line)) return <h3 key={key} className="text-xl font-bold">{renderInline(line.slice(2), key, { eventRefs, resourceRefs, onEventClick, interactiveMentions })}</h3>;
       if (/^[-*]\s/.test(line)) return <p key={key} className="pl-4 before:mr-2 before:content-['•']">{renderInline(line.slice(2), key, { eventRefs, resourceRefs, onEventClick, interactiveMentions })}</p>;
       if (/^>\s?/.test(line)) return <blockquote key={key} className="border-l-2 border-line pl-3 text-muted">{renderInline(line.replace(/^>\s?/, ''), key, { eventRefs, resourceRefs, onEventClick, interactiveMentions })}</blockquote>;
       return <p key={key} className={line ? '' : 'min-h-3'}>{renderInline(line, key, { eventRefs, resourceRefs, onEventClick, interactiveMentions })}</p>;

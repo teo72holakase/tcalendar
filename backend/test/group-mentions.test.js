@@ -33,7 +33,7 @@ const { attachMentions } = require('../src/controllers/groupContentController');
 
 test('resuelve menciones solo dentro del grupo y devuelve títulos y destinos', async () => {
   const post = {
-    content: `Revisen /${eventId} y !${resourceId}`,
+    content: `Revisen /${eventId.toUpperCase()} y !${resourceId.toUpperCase()}`,
     toObject() { return { content: this.content }; },
   };
   const [result] = await attachMentions([post], groupId);

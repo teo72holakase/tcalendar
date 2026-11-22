@@ -187,8 +187,7 @@ const GroupPage = () => {
           ))}
         </div>
 
-        {tab === 'calendar' && (
-        <div id="group-panel-calendar" role="tabpanel" aria-labelledby="group-tab-calendar" className="grid items-start gap-8 lg:grid-cols-[1fr_21rem]">
+        <div id="group-panel-calendar" role="tabpanel" aria-labelledby="group-tab-calendar" hidden={tab !== 'calendar'} className={`${tab === 'calendar' ? 'grid' : 'hidden'} items-start gap-8 lg:grid-cols-[1fr_21rem]`}>
           <section aria-label="Calendario del grupo">
             <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
               <div role="group" aria-label="Vista" className="inline-flex rounded-2xl bg-surface-2 p-1">
@@ -211,13 +210,8 @@ const GroupPage = () => {
             onInvite={() => setInviteOpen(true)} onLink={() => setLinkOpen(true)} onRemove={kick} onDelete={() => setDeleteOpen(true)}
           />
         </div>
-        )}
-        {tab === 'forum' && (
-          <div id="group-panel-forum" role="tabpanel" aria-labelledby="group-tab-forum"><GroupForum key={groupId} groupId={groupId} members={members} currentUserId={myId} isCreator={isCreator} isAdmin={Boolean(user?.isAdmin)} onEventClick={openMentionedEvent} /></div>
-        )}
-        {tab === 'resources' && (
-          <div id="group-panel-resources" role="tabpanel" aria-labelledby="group-tab-resources"><GroupResources key={groupId} groupId={groupId} currentUserId={myId} isCreator={isCreator} isAdmin={Boolean(user?.isAdmin)} /></div>
-        )}
+        <div id="group-panel-forum" role="tabpanel" aria-labelledby="group-tab-forum" hidden={tab !== 'forum'} className={tab === 'forum' ? '' : 'hidden'}><GroupForum key={groupId} groupId={groupId} members={members} currentUserId={myId} isCreator={isCreator} isAdmin={Boolean(user?.isAdmin)} onEventClick={openMentionedEvent} active={tab === 'forum'} /></div>
+        <div id="group-panel-resources" role="tabpanel" aria-labelledby="group-tab-resources" hidden={tab !== 'resources'} className={tab === 'resources' ? '' : 'hidden'}><GroupResources key={groupId} groupId={groupId} currentUserId={myId} isCreator={isCreator} isAdmin={Boolean(user?.isAdmin)} active={tab === 'resources'} /></div>
       </main>
 
       {tab === 'calendar' && <button type="button" onClick={() => openNew()} aria-label="Nuevo evento" className="btn btn-primary fixed right-5 z-30 h-14 w-14 rounded-full p-0 shadow-xl sm:hidden" style={{ bottom: 'calc(1.25rem + env(safe-area-inset-bottom))' }}>

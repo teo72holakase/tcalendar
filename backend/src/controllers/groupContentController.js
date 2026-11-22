@@ -23,8 +23,8 @@ const validUrl = (value) => {
 const attachMentions = async (items, groupId) => {
   const mentions = items.map((item) => ({
     item,
-    events: [...new Set([...item.content.matchAll(/\/([a-f\d]{24})\b/gi)].map((match) => match[1]))],
-    resources: [...new Set([...item.content.matchAll(/!([a-f\d]{24})\b/gi)].map((match) => match[1]))],
+    events: [...new Set([...item.content.matchAll(/\/([a-f\d]{24})\b/gi)].map((match) => match[1].toLowerCase()))],
+    resources: [...new Set([...item.content.matchAll(/!([a-f\d]{24})\b/gi)].map((match) => match[1].toLowerCase()))],
   }));
   const eventIds = [...new Set(mentions.flatMap(({ events }) => events))].slice(0, 40);
   const resourceIds = [...new Set(mentions.flatMap(({ resources }) => resources))].slice(0, 40);
@@ -127,9 +127,20 @@ const getComments = async (req, res) => {
     if (!(await getMemberGroup(req.params.groupId, req.user, res))) return;
     const postExists = await GroupPost.exists({ _id: req.params.postId, group: req.params.groupId });
     if (!postExists) return res.status(404).json({ message: 'Mensaje no encontrado' });
+    const parentId = req.query.parentId || null;
+    if (parentId) {
+      if (!mongoose.isValidObjectId(parentId)) return res.status(400).json({ message: 'Comentario padre no válido' });
+      const parentExists = await GroupComment.exists({
+        _id: parentId,
+        post: req.params.postId,
+        group: req.params.groupId,
+      });
+      if (!parentExists) return res.status(404).json({ message: 'Comentario padre no encontrado' });
+    }
     const result = await listPage(GroupComment, {
       group: req.params.groupId,
       post: req.params.postId,
+      parent: parentId,
     }, req.query.cursor);
     if (!result) return res.status(400).json({ message: 'Cursor no válido' });
     result.items = await attachMentions(result.items, req.params.groupId);
@@ -148,9 +159,20 @@ const createComment = async (req, res) => {
     if (!boundedText(req.body?.content, 2000)) {
       return res.status(400).json({ message: 'El comentario es obligatorio (máx. 2000 caracteres)' });
     }
+    const parentId = req.body?.parentId || null;
+    if (parentId) {
+      if (!mongoose.isValidObjectId(parentId)) return res.status(400).json({ message: 'Comentario padre no válido' });
+      const parentExists = await GroupComment.exists({
+        _id: parentId,
+        post: req.params.postId,
+        group: req.params.groupId,
+      });
+      if (!parentExists) return res.status(404).json({ message: 'Comentario padre no encontrado' });
+    }
     const comment = await GroupComment.create({
       group: req.params.groupId,
       post: req.params.postId,
+      parent: parentId,
       author: req.user._id,
       content: req.body.content.trim(),
     });
@@ -175,6 +197,11 @@ const deleteComment = async (req, res) => {
     if (comment.author.toString() !== req.user._id.toString() && !canModerate(group, req.user)) {
       return res.status(403).json({ message: 'No tenés permiso para borrar este comentario' });
     }
+    await GroupComment.updateMany({
+      group: comment.group,
+      post: comment.post,
+      parent: comment._id,
+    }, { $set: { parent: null } });
     await comment.deleteOne();
     res.json({ message: 'Comentario eliminado' });
   } catch (error) {
@@ -189,7 +216,7 @@ const getResources = async (req, res) => {
     const query = { group: req.params.groupId };
     const search = typeof req.query.q === 'string' ? req.query.q.trim().slice(0, 60) : '';
     if (search) {
-      const matches = [{ title: { $regex: `^${escapeRegex(search)}` } }];
+      const matches = [{ title: { $regex: `^${escapeRegex(search)}`, $options: 'i' } }];
       if (/^[a-f\d]{24}$/i.test(search)) matches.push({ _id: new mongoose.Types.ObjectId(search) });
       const items = await GroupResource.find({ ...query, $or: matches })
         .select('title description url fileType createdBy createdAt')

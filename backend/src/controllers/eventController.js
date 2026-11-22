@@ -140,7 +140,7 @@ const getGroupEvents = async (req, res) => {
     if (Object.keys(range).length) filter.dueDate = range;
     const search = typeof req.query.q === 'string' ? req.query.q.trim().slice(0, 60) : '';
     if (search) {
-      const matches = [{ title: { $regex: `^${escapeRegex(search)}` } }];
+      const matches = [{ title: { $regex: `^${escapeRegex(search)}`, $options: 'i' } }];
       if (/^[a-f\d]{24}$/i.test(search)) matches.push({ _id: new mongoose.Types.ObjectId(search) });
       filter.$or = matches;
     }

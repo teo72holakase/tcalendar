@@ -23,10 +23,11 @@ const fileInfo = (resource) => {
   return { Icon: File, type: 'Archivo o enlace' };
 };
 
-export default function GroupResources({ groupId, currentUserId, isCreator, isAdmin }) {
+export default function GroupResources({ groupId, currentUserId, isCreator, isAdmin, active }) {
   const [resources, setResources] = useState([]);
   const [cursor, setCursor] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState({ title: '', description: '', url: '', fileType: 'auto' });
@@ -40,6 +41,7 @@ export default function GroupResources({ groupId, currentUserId, isCreator, isAd
       const { data } = await fetchGroupResources(groupId, nextCursor);
       setResources((current) => nextCursor ? [...current, ...data.items] : data.items);
       setCursor(data.nextCursor);
+      setLoaded(true);
     } catch (requestError) {
       setError(errorText(requestError, 'No se pudieron cargar los recursos'));
     } finally {
@@ -47,7 +49,11 @@ export default function GroupResources({ groupId, currentUserId, isCreator, isAd
     }
   };
 
-  useEffect(() => { load(); /* fetch only when the resources tab opens */ }, [groupId]);
+  useEffect(() => {
+    if (active && !loaded) load();
+    // Load once per group, on first visit, so tab changes do not discard entered data or repeat reads.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active, groupId, loaded]);
 
   const submit = async (event) => {
     event.preventDefault();
@@ -106,7 +112,7 @@ export default function GroupResources({ groupId, currentUserId, isCreator, isAd
         </form>
       )}
 
-      {error && <p role="alert" className="rounded-xl bg-danger-soft p-3 text-sm text-danger">{error}</p>}
+      {error && <div role="alert" className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-danger-soft p-3 text-sm text-danger"><span>{error}</span><button type="button" onClick={() => load()} className="font-bold underline">Reintentar</button></div>}
       {loading && !resources.length && <div role="status" className="card p-6 text-center text-muted">Cargando recursos…</div>}
       {!loading && !error && !resources.length && <div className="card p-8 text-center text-muted">Todavía no hay enlaces. Agregá el primero para compartirlo con el grupo.</div>}
 
