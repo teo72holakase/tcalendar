@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check } from 'lucide-react';
+import { Check, ExternalLink, File, FileText, FolderOpen } from 'lucide-react';
 import Modal from './Modal';
 import { Avatar } from './Avatar';
 import { DEFAULT_EVENT_COLOR, EVENT_COLORS, dayNum, daysUntil, fmt, relative, relClass } from '../lib/ui';
@@ -10,6 +10,12 @@ const Row = ({ label, children }) => (
     <dd className="mt-0.5 whitespace-pre-wrap break-words text-lg">{children}</dd>
   </div>
 );
+
+const resourceIcon = (fileType, url = '') => {
+  if (/\/folders\//i.test(url)) return FolderOpen;
+  if (fileType === 'pdf' || /\.pdf(?:$|[?#])/i.test(url)) return FileText;
+  return File;
+};
 
 const EventDetailsModal = ({ open, onClose, event, onDelete, onEdit, onColorChange, canDelete, loading, error }) => {
   const [colorError, setColorError] = useState('');
@@ -40,7 +46,24 @@ const EventDetailsModal = ({ open, onClose, event, onDelete, onEdit, onColorChan
         {event.topics && <Row label="Temas o propuesta">{event.topics}</Row>}
         {event.description && <Row label="Detalles">{event.description}</Row>}
         <Row label="Creado por"><span className="inline-flex items-center gap-2"><Avatar name={event.createdBy?.username || '?'} size={28} /> {event.createdBy?.username || 'Usuario desconocido'}</span></Row>
+        {event.createdAt && <Row label="Creado el">{new Date(event.createdAt).toLocaleString('es', { dateStyle: 'long', timeStyle: 'short' })}</Row>}
       </dl>
+
+      {((event.resources?.length || 0) > 0 || (event.resourceLinks?.length || 0) > 0) && (
+        <section className="mt-6 space-y-2" aria-label="Recursos adjuntos">
+          <h3 className="text-sm font-semibold text-muted">Recursos</h3>
+          {[...(event.resources || []).filter(Boolean), ...(event.resourceLinks || [])].map((resource, index) => {
+            const Icon = resourceIcon(resource.fileType, resource.url);
+            return (
+              <a key={resource._id || `${resource.url}-${index}`} href={resource.url} target="_blank" rel="noopener noreferrer" className="flex min-h-12 items-center gap-3 rounded-xl border border-line p-3 hover:bg-surface-2">
+                <Icon size={18} className="shrink-0 text-muted" aria-hidden="true" />
+                <span className="min-w-0 flex-1 truncate font-medium">{resource.title}</span>
+                <ExternalLink size={16} className="shrink-0 text-muted" aria-hidden="true" />
+              </a>
+            );
+          })}
+        </section>
+      )}
 
       {canDelete && (
         <fieldset className="mt-6">

@@ -1,5 +1,10 @@
 const mongoose = require('mongoose');
 
+const EventResourceLinkSchema = new mongoose.Schema({
+  title: { type: String, required: true, trim: true, maxlength: 120 },
+  url: { type: String, required: true, trim: true, maxlength: 2048 },
+}, { _id: false });
+
 const EventSchema = new mongoose.Schema({
   title: { type: String, required: true, trim: true },
   description: { type: String, trim: true },
@@ -10,6 +15,8 @@ const EventSchema = new mongoose.Schema({
   color: { type: String, default: '#A2CFFE' },
   group: { type: mongoose.Schema.Types.ObjectId, ref: 'Group', required: true },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  resources: [{ type: mongoose.Schema.Types.ObjectId, ref: 'GroupResource' }],
+  resourceLinks: { type: [EventResourceLinkSchema], default: [] },
   reminded: { type: Boolean, default: false }, // ya se mandó el recordatorio push de "mañana"
   createdAt: { type: Date, default: Date.now },
 });

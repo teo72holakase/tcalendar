@@ -112,7 +112,7 @@ const GroupPage = () => {
 
   const save = async (form) => {
     const done = editingEvent
-      ? await updateEvent(editingEvent._id, { title: form.title, description: form.description, topics: form.topics, color: form.color, dueDate: form.dueDate })
+      ? await updateEvent(editingEvent._id, { title: form.title, description: form.description, topics: form.topics, color: form.color, dueDate: form.dueDate, resources: form.resources, resourceLinks: form.resourceLinks })
       : await createEvent(groupId, form);
     if (!done) return setEventError('No se pudo guardar el evento. Revisá tu conexión e intentá de nuevo.');
     closeEvent();
@@ -218,7 +218,7 @@ const GroupPage = () => {
         <Plus size={26} aria-hidden="true" />
       </button>}
 
-      <EventFormModal open={eventModal} onClose={closeEvent} onSave={save} loading={loading} error={eventError} initialData={editingEvent || { dueDate: selectedDate }} />
+      <EventFormModal open={eventModal} onClose={closeEvent} onSave={save} loading={loading} error={eventError} initialData={editingEvent || { dueDate: selectedDate }} groupId={groupId} />
       <EventDetailsModal
         open={Boolean(selectedEvent)} onClose={() => { setSelectedEvent(null); setError(''); }} event={selectedEvent}
         onDelete={remove} onEdit={startEdit} onColorChange={changeColor} canDelete={Boolean(selectedEvent) && canManage(selectedEvent)} loading={loading} error={error}

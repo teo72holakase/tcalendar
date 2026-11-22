@@ -1,10 +1,42 @@
 const Event = require('../models/Event');
 const Group = require('../models/Group');
+const GroupResource = require('../models/GroupResource');
 const mongoose = require('mongoose');
 const { buildIcs } = require('../utils/ics');
 
 const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const validWebUrl = (value) => {
+  try {
+    const url = new URL(value);
+    return ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password;
+  } catch {
+    return false;
+  }
+};
+
+const validateEventAttachments = async (groupId, resourceIds, resourceLinks) => {
+  if (!Array.isArray(resourceIds) || resourceIds.length > 20 || resourceIds.some((id) => !mongoose.isValidObjectId(id))) {
+    return { error: 'La lista de recursos no es válida' };
+  }
+  if (!Array.isArray(resourceLinks) || resourceLinks.length > 10) {
+    return { error: 'Podés adjuntar hasta 10 enlaces' };
+  }
+  const ids = [...new Set(resourceIds.map(String))];
+  if (ids.length) {
+    const found = await GroupResource.find({ group: groupId, _id: { $in: ids } }).select('_id').lean();
+    if (found.length !== ids.length) return { error: 'Uno o más recursos no pertenecen a este grupo' };
+  }
+  const links = [];
+  for (const link of resourceLinks) {
+    if (!link || typeof link.title !== 'string' || !link.title.trim() || link.title.trim().length > 120 ||
+        typeof link.url !== 'string' || link.url.length > 2048 || !validWebUrl(link.url)) {
+      return { error: 'Revisá el título y el enlace de los recursos adjuntos' };
+    }
+    links.push({ title: link.title.trim(), url: link.url.trim() });
+  }
+  return { resources: ids, resourceLinks: links };
+};
 
 // El creador del evento o el creador del grupo pueden modificarlo/borrarlo (igual que muestra la UI).
 const canManageEvent = async (event, userId) => {
@@ -42,6 +74,7 @@ const getEvents = async (req, res) => {
     const events = await Event.find(filter)
       .populate('createdBy', 'username')
       .populate('group', 'name')
+      .populate('resources', 'title url fileType')
       .sort({ dueDate: 1 });
 
     res.json(events);
@@ -53,7 +86,7 @@ const getEvents = async (req, res) => {
 
 const createEvent = async (req, res) => {
   try {
-    const { title, description, topics, assignedBy, dueDate, requestedDate, color } = req.body;
+    const { title, description, topics, assignedBy, dueDate, requestedDate, color, resources = [], resourceLinks = [] } = req.body;
     const groupId = req.params.groupId || req.body.groupId;
 
     if (!title || !dueDate) {
@@ -75,6 +108,9 @@ const createEvent = async (req, res) => {
     const isMember = group.members.some(m => m.toString() === req.user._id.toString());
     if (!isMember) return res.status(403).json({ message: 'No tenés acceso a este grupo' });
 
+    const attachments = await validateEventAttachments(groupId, resources, resourceLinks);
+    if (attachments.error) return res.status(400).json({ message: attachments.error });
+
     const parsedDueDate = parseDate(dueDate);
     const parsedRequestedDate = requestedDate ? parseDate(requestedDate) : null;
     if (Number.isNaN(parsedDueDate.getTime())) {
@@ -89,6 +125,8 @@ const createEvent = async (req, res) => {
       dueDate: parsedDueDate,
       requestedDate: parsedRequestedDate,
       ...(color && { color }),
+      resources: attachments.resources,
+      resourceLinks: attachments.resourceLinks,
       group: groupId,
       createdBy: req.user._id,
     });
@@ -96,6 +134,7 @@ const createEvent = async (req, res) => {
     await event.save();
     await event.populate('createdBy', 'username');
     await event.populate('group', 'name');
+    await event.populate('resources', 'title url fileType');
 
     res.status(201).json(event);
   } catch (error) {
@@ -147,6 +186,7 @@ const getGroupEvents = async (req, res) => {
 
     let query = Event.find(filter)
       .populate('createdBy', 'username')
+      .populate('resources', 'title url fileType')
       .sort({ dueDate: 1 });
     if (search) query = query.limit(8);
     const events = await query;
@@ -166,7 +206,7 @@ const updateEvent = async (req, res) => {
       return res.status(403).json({ message: 'Solo el creador del evento o del grupo puede editarlo' });
     }
 
-    const { title, description, topics, dueDate, color } = req.body;
+    const { title, description, topics, dueDate, color, resources, resourceLinks } = req.body;
     if (title !== undefined) {
       if (!String(title).trim() || String(title).length > 120) {
         return res.status(400).json({ message: 'El título es obligatorio (máx. 120 caracteres)' });
@@ -185,9 +225,20 @@ const updateEvent = async (req, res) => {
       event.dueDate = parsed;
       event.reminded = false; // si cambia el día, corresponde un nuevo recordatorio
     }
+    if (resources !== undefined || resourceLinks !== undefined) {
+      const attachments = await validateEventAttachments(
+        event.group,
+        resources ?? event.resources.map((resource) => resource._id || resource),
+        resourceLinks ?? event.resourceLinks,
+      );
+      if (attachments.error) return res.status(400).json({ message: attachments.error });
+      event.resources = attachments.resources;
+      event.resourceLinks = attachments.resourceLinks;
+    }
 
     await event.save();
     await event.populate('createdBy', 'username');
+    await event.populate('resources', 'title url fileType');
     res.json(event);
   } catch (error) {
     console.error('Error updateEvent:', error);
@@ -229,6 +280,7 @@ const getUpcomingEvents = async (req, res) => {
     })
       .populate('group', 'name _id')
       .populate('createdBy', 'username')
+      .populate('resources', 'title url fileType')
       .sort({ dueDate: 1 })
       .limit(10);
 
