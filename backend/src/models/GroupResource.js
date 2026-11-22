@@ -11,5 +11,6 @@ const GroupResourceSchema = new mongoose.Schema({
 });
 
 GroupResourceSchema.index({ group: 1, _id: -1 });
+GroupResourceSchema.index({ group: 1, title: 1 });
 
 module.exports = mongoose.model('GroupResource', GroupResourceSchema);

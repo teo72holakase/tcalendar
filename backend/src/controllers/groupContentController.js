@@ -1,11 +1,13 @@
 const mongoose = require('mongoose');
 const Group = require('../models/Group');
+const Event = require('../models/Event');
 const GroupPost = require('../models/GroupPost');
 const GroupComment = require('../models/GroupComment');
 const GroupResource = require('../models/GroupResource');
 const { isAdmin } = require('../utils/admin');
 
 const PAGE_SIZE = 20;
+const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const isMember = (group, userId) => group.members.some((member) => member.toString() === userId.toString());
 const canModerate = (group, user) => group.creator.toString() === user._id.toString() || isAdmin(user);
 const boundedText = (value, max) => typeof value === 'string' && value.trim().length > 0 && value.trim().length <= max;
@@ -16,6 +18,27 @@ const validUrl = (value) => {
   } catch {
     return false;
   }
+};
+
+const attachMentions = async (items, groupId) => {
+  const mentions = items.map((item) => ({
+    item,
+    events: [...new Set([...item.content.matchAll(/\/([a-f\d]{24})\b/gi)].map((match) => match[1]))],
+    resources: [...new Set([...item.content.matchAll(/!([a-f\d]{24})\b/gi)].map((match) => match[1]))],
+  }));
+  const eventIds = [...new Set(mentions.flatMap(({ events }) => events))].slice(0, 40);
+  const resourceIds = [...new Set(mentions.flatMap(({ resources }) => resources))].slice(0, 40);
+  const [events, resources] = await Promise.all([
+    eventIds.length ? Event.find({ group: groupId, _id: { $in: eventIds } }).select('_id title dueDate').lean() : [],
+    resourceIds.length ? GroupResource.find({ group: groupId, _id: { $in: resourceIds } }).select('_id title url').lean() : [],
+  ]);
+  const eventById = new Map(events.map((event) => [String(event._id), event]));
+  const resourceById = new Map(resources.map((resource) => [String(resource._id), resource]));
+  return mentions.map(({ item, events: eventRefs, resources: resourceRefs }) => ({
+    ...item.toObject(),
+    eventRefs: Object.fromEntries(eventRefs.flatMap((id) => eventById.has(id) ? [[id, eventById.get(id)]] : [])),
+    resourceRefs: Object.fromEntries(resourceRefs.flatMap((id) => resourceById.has(id) ? [[id, resourceById.get(id)]] : [])),
+  }));
 };
 
 const getMemberGroup = async (groupId, user, res) => {
@@ -52,6 +75,7 @@ const getPosts = async (req, res) => {
     if (!(await getMemberGroup(req.params.groupId, req.user, res))) return;
     const result = await listPage(GroupPost, { group: req.params.groupId }, req.query.cursor);
     if (!result) return res.status(400).json({ message: 'Cursor no válido' });
+    result.items = await attachMentions(result.items, req.params.groupId);
     res.json(result);
   } catch (error) {
     console.error('Error getGroupPosts:', error);
@@ -71,7 +95,7 @@ const createPost = async (req, res) => {
       content: req.body.content.trim(),
     });
     await post.populate('author', 'username');
-    res.status(201).json(post);
+    res.status(201).json((await attachMentions([post], req.params.groupId))[0]);
   } catch (error) {
     console.error('Error createGroupPost:', error);
     res.status(500).json({ message: 'Error al publicar el mensaje' });
@@ -108,6 +132,7 @@ const getComments = async (req, res) => {
       post: req.params.postId,
     }, req.query.cursor);
     if (!result) return res.status(400).json({ message: 'Cursor no válido' });
+    result.items = await attachMentions(result.items, req.params.groupId);
     res.json(result);
   } catch (error) {
     console.error('Error getGroupComments:', error);
@@ -130,7 +155,7 @@ const createComment = async (req, res) => {
       content: req.body.content.trim(),
     });
     await comment.populate('author', 'username');
-    res.status(201).json(comment);
+    res.status(201).json((await attachMentions([comment], req.params.groupId))[0]);
   } catch (error) {
     console.error('Error createGroupComment:', error);
     res.status(500).json({ message: 'Error al publicar el comentario' });
@@ -162,6 +187,17 @@ const getResources = async (req, res) => {
   try {
     if (!(await getMemberGroup(req.params.groupId, req.user, res))) return;
     const query = { group: req.params.groupId };
+    const search = typeof req.query.q === 'string' ? req.query.q.trim().slice(0, 60) : '';
+    if (search) {
+      const matches = [{ title: { $regex: `^${escapeRegex(search)}` } }];
+      if (/^[a-f\d]{24}$/i.test(search)) matches.push({ _id: new mongoose.Types.ObjectId(search) });
+      const items = await GroupResource.find({ ...query, $or: matches })
+        .select('title description url fileType createdBy createdAt')
+        .populate('createdBy', 'username')
+        .sort({ _id: -1 })
+        .limit(8);
+      return res.json(items);
+    }
     if (req.query.cursor) {
       if (!mongoose.isValidObjectId(req.query.cursor)) return res.status(400).json({ message: 'Cursor no válido' });
       query._id = { $lt: req.query.cursor };
@@ -231,5 +267,5 @@ module.exports = {
   getPosts, createPost, deletePost,
   getComments, createComment, deleteComment,
   getResources, createResource, deleteResource,
-  validUrl,
+  validUrl, attachMentions,
 };

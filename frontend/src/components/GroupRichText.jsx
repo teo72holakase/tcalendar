@@ -1,6 +1,6 @@
 import { Globe2, Link2 } from 'lucide-react';
 
-const INLINE = /(\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)|https?:\/\/[^\s<]+|\*\*[^*]+\*\*|__[^_]+__|\*[^*]+\*|`[^`]+`|\/[a-f\d]{24}\b|@[\w.-]+)/gi;
+const INLINE = /(\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)|https?:\/\/[^\s<]+|\*\*[^*]+\*\*|__[^_]+__|\*[^*]+\*|`[^`]+`|\/[a-f\d]{24}\b|![a-f\d]{24}\b|@[\w.-]+)/gi;
 
 const previewsFor = (content) => {
   const found = new Map();
@@ -18,7 +18,7 @@ const previewsFor = (content) => {
   return [...found.values()];
 };
 
-const renderInline = (text, keyPrefix) => {
+const renderInline = (text, keyPrefix, { eventRefs = {}, resourceRefs = {}, onEventClick, interactiveMentions = true } = {}) => {
   const parts = [];
   let cursor = 0;
   for (const [index, match] of [...text.matchAll(INLINE)].entries()) {
@@ -38,7 +38,19 @@ const renderInline = (text, keyPrefix) => {
     } else if (token.startsWith('`')) {
       parts.push(<code key={`${keyPrefix}-${index}`} className="rounded bg-surface-2 px-1.5 py-0.5 text-[0.92em]">{token.slice(1, -1)}</code>);
     } else if (token.startsWith('/')) {
-      parts.push(<span key={`${keyPrefix}-${index}`} className="chip chip-accent">Evento · {token.slice(-6)}</span>);
+      const event = eventRefs[token.slice(1).toLowerCase()];
+      parts.push(event
+        ? interactiveMentions
+          ? <button key={`${keyPrefix}-${index}`} type="button" onClick={() => onEventClick?.(event)} className="chip chip-accent hover:brightness-95">{event.title}</button>
+          : <span key={`${keyPrefix}-${index}`} className="chip chip-accent">{event.title}</span>
+        : <span key={`${keyPrefix}-${index}`} className="chip chip-accent">Evento · {token.slice(-6)}</span>);
+    } else if (token.startsWith('!')) {
+      const resource = resourceRefs[token.slice(1).toLowerCase()];
+      parts.push(resource
+        ? interactiveMentions
+          ? <a key={`${keyPrefix}-${index}`} href={resource.url} target="_blank" rel="noopener noreferrer" className="chip chip-accent hover:brightness-95">{resource.title}</a>
+          : <span key={`${keyPrefix}-${index}`} className="chip chip-accent">{resource.title}</span>
+        : <span key={`${keyPrefix}-${index}`} className="chip chip-accent">Recurso · {token.slice(-6)}</span>);
     } else {
       parts.push(<span key={`${keyPrefix}-${index}`} className="font-semibold text-accent-text">{token}</span>);
     }
@@ -48,7 +60,7 @@ const renderInline = (text, keyPrefix) => {
   return parts;
 };
 
-const GroupRichText = ({ content }) => {
+const GroupRichText = ({ content, eventRefs, resourceRefs, onEventClick, interactiveMentions = true }) => {
   const text = String(content || '');
   const previews = previewsFor(text);
   return (
@@ -56,12 +68,12 @@ const GroupRichText = ({ content }) => {
     <div className="space-y-1">
     {text.split('\n').map((line, index) => {
       const key = `line-${index}`;
-      if (/^###\s/.test(line)) return <h4 key={key} className="font-bold">{renderInline(line.slice(4), key)}</h4>;
-      if (/^##\s/.test(line)) return <h3 key={key} className="font-bold">{renderInline(line.slice(3), key)}</h3>;
-      if (/^#\s/.test(line)) return <h2 key={key} className="font-bold">{renderInline(line.slice(2), key)}</h2>;
-      if (/^[-*]\s/.test(line)) return <p key={key} className="pl-4 before:mr-2 before:content-['•']">{renderInline(line.slice(2), key)}</p>;
-      if (/^>\s?/.test(line)) return <blockquote key={key} className="border-l-2 border-line pl-3 text-muted">{renderInline(line.replace(/^>\s?/, ''), key)}</blockquote>;
-      return <p key={key} className={line ? '' : 'min-h-3'}>{renderInline(line, key)}</p>;
+      if (/^###\s/.test(line)) return <h4 key={key} className="font-bold">{renderInline(line.slice(4), key, { eventRefs, resourceRefs, onEventClick, interactiveMentions })}</h4>;
+      if (/^##\s/.test(line)) return <h3 key={key} className="font-bold">{renderInline(line.slice(3), key, { eventRefs, resourceRefs, onEventClick, interactiveMentions })}</h3>;
+      if (/^#\s/.test(line)) return <h2 key={key} className="font-bold">{renderInline(line.slice(2), key, { eventRefs, resourceRefs, onEventClick, interactiveMentions })}</h2>;
+      if (/^[-*]\s/.test(line)) return <p key={key} className="pl-4 before:mr-2 before:content-['•']">{renderInline(line.slice(2), key, { eventRefs, resourceRefs, onEventClick, interactiveMentions })}</p>;
+      if (/^>\s?/.test(line)) return <blockquote key={key} className="border-l-2 border-line pl-3 text-muted">{renderInline(line.replace(/^>\s?/, ''), key, { eventRefs, resourceRefs, onEventClick, interactiveMentions })}</blockquote>;
+      return <p key={key} className={line ? '' : 'min-h-3'}>{renderInline(line, key, { eventRefs, resourceRefs, onEventClick, interactiveMentions })}</p>;
     })}
     </div>
     {previews.length > 0 && (

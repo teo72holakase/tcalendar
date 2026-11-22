@@ -54,6 +54,7 @@ export const fetchGroupComments  = (groupId, postId, cursor) => api.get(`/groups
 export const createGroupComment  = (groupId, postId, content) => api.post(`/groups/${groupId}/posts/${postId}/comments`, { content });
 export const deleteGroupComment  = (groupId, postId, commentId) => api.delete(`/groups/${groupId}/posts/${postId}/comments/${commentId}`);
 export const fetchGroupResources = (groupId, cursor)  => api.get(`/groups/${groupId}/resources`, { params: cursor ? { cursor } : {} });
+export const searchGroupResources = (groupId, query) => api.get(`/groups/${groupId}/resources`, { params: { q: query } });
 export const createGroupResource = (groupId, payload) => api.post(`/groups/${groupId}/resources`, payload);
 export const deleteGroupResource = (groupId, id)      => api.delete(`/groups/${groupId}/resources/${id}`);
 export const exportGroupIcs      = (groupId)           => api.get(`/groups/${groupId}/events.ics`, { responseType: 'blob' });

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { CalendarPlus } from 'lucide-react';
 import EventRow from './EventRow';
 import { dayNum, daysUntil, fmt, todayNum } from '../lib/ui';
@@ -6,7 +6,7 @@ import { dayNum, daysUntil, fmt, todayNum } from '../lib/ui';
 const bucketOf = (n, ms) => (n === 0 ? 'Hoy' : n === 1 ? 'Mañana' : n <= 7 ? 'Próximos 7 días' : fmt(ms, { month: 'long', year: 'numeric' }));
 
 // Agenda: una línea de tiempo con el marcador de "Hoy". Lo que ya pasó queda plegado arriba; lo que viene, agrupado.
-const AgendaView = ({ events, onOpen, onAdd, loading }) => {
+const AgendaView = ({ events, onOpen, onAdd, loading, highlightedEventId }) => {
   const [showPast, setShowPast] = useState(false);
   const { past, groups } = useMemo(() => {
     const sorted = [...events].sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
@@ -19,6 +19,10 @@ const AgendaView = ({ events, onOpen, onAdd, loading }) => {
     }
     return { past: sorted.filter((x) => daysUntil(x.dueDate) < 0), groups };
   }, [events]);
+
+  useEffect(() => {
+    if (highlightedEventId && past.some((event) => String(event._id) === String(highlightedEventId))) setShowPast(true);
+  }, [highlightedEventId, past]);
 
   if (loading && events.length === 0) {
     return <div aria-busy="true" className="space-y-3">{[0, 1, 2].map((i) => <div key={i} className="skeleton h-24" />)}</div>;
@@ -33,7 +37,7 @@ const AgendaView = ({ events, onOpen, onAdd, loading }) => {
           <button type="button" onClick={() => setShowPast((v) => !v)} aria-expanded={showPast} className="btn btn-quiet btn-sm">
             {showPast ? 'Ocultar anteriores' : `Ver anteriores (${past.length})`}
           </button>
-          {showPast && <ol className="mt-3 space-y-3">{past.map((e) => <EventRow key={e._id} event={e} onOpen={onOpen} />)}</ol>}
+          {showPast && <ol className="mt-3 space-y-3">{past.map((e) => <EventRow key={e._id} event={e} onOpen={onOpen} highlighted={String(e._id) === String(highlightedEventId)} />)}</ol>}
         </div>
       )}
 
@@ -57,7 +61,7 @@ const AgendaView = ({ events, onOpen, onAdd, loading }) => {
             <section key={g.label} aria-label={g.label}>
               <h3 className="mb-3 ml-2 pl-6 text-sm font-bold uppercase tracking-wide text-muted">{g.label}</h3>
               <ol className="relative ml-2 space-y-3 border-l-2 border-line pl-6">
-                {g.items.map((e) => <EventRow key={e._id} event={e} onOpen={onOpen} line />)}
+                {g.items.map((e) => <EventRow key={e._id} event={e} onOpen={onOpen} line highlighted={String(e._id) === String(highlightedEventId)} />)}
               </ol>
             </section>
           ))}

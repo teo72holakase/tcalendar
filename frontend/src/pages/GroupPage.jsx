@@ -36,6 +36,8 @@ const GroupPage = () => {
   const [linkOpen, setLinkOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [focusedEvent, setFocusedEvent] = useState(null);
+  const [highlightedEventId, setHighlightedEventId] = useState('');
   const [editingEvent, setEditingEvent] = useState(null);
   const [selectedDate, setSelectedDate] = useState('');
   const [eventError, setEventError] = useState('');
@@ -44,6 +46,9 @@ const GroupPage = () => {
   useEffect(() => {
     resetGroupData();
     setTab('calendar');
+    setSelectedEvent(null);
+    setFocusedEvent(null);
+    setHighlightedEventId('');
     loadMembers(groupId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [groupId]);
@@ -66,11 +71,33 @@ const GroupPage = () => {
 
   // La agenda mira de dos semanas atrás a cuatro meses adelante; la vista Mes pide su propio rango.
   useEffect(() => {
-    if (view !== 'agenda') return;
-    const t = todayNum();
-    loadEvents(groupId, { from: new Date(addDays(t, -14)).toISOString(), to: new Date(addDays(t, 120)).toISOString() });
+    if (view !== 'agenda') return undefined;
+    let range;
+    if (focusedEvent?.dueDate && !Number.isNaN(new Date(focusedEvent.dueDate).getTime())) {
+      const date = new Date(focusedEvent.dueDate);
+      const from = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+      range = { from: from.toISOString(), to: new Date(from.getTime() + 86400000).toISOString() };
+    } else {
+      const today = todayNum();
+      range = { from: new Date(addDays(today, -14)).toISOString(), to: new Date(addDays(today, 120)).toISOString() };
+    }
+    loadEvents(groupId, range);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [groupId, view]);
+    return undefined;
+  }, [groupId, view, focusedEvent]);
+
+  useEffect(() => {
+    if (tab !== 'calendar' || !highlightedEventId) return undefined;
+    if (!events.some((event) => String(event._id) === String(highlightedEventId))) return undefined;
+    const scrollTimer = window.setTimeout(() => {
+      document.getElementById(`group-event-${highlightedEventId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
+    const clearTimer = window.setTimeout(() => setHighlightedEventId(''), 5000);
+    return () => {
+      window.clearTimeout(scrollTimer);
+      window.clearTimeout(clearTimer);
+    };
+  }, [events, tab, highlightedEventId]);
 
   // El login devuelve { id, username } (no "_id").
   const myId = String(user?.id ?? user?._id ?? '');
@@ -126,6 +153,13 @@ const GroupPage = () => {
   };
 
   const rangeLoader = (from, to) => loadEvents(groupId, { from, to });
+  const openMentionedEvent = (event) => {
+    setSelectedEvent(null);
+    setFocusedEvent({ _id: event._id, dueDate: event.dueDate });
+    setHighlightedEventId(String(event._id));
+    setView('agenda');
+    setTab('calendar');
+  };
 
   return (
     <div className="min-h-dvh">
@@ -168,7 +202,7 @@ const GroupPage = () => {
               </div>
             </div>
             {view === 'agenda'
-              ? <AgendaView events={events} onOpen={setSelectedEvent} onAdd={() => openNew()} loading={loading} />
+              ? <AgendaView events={events} onOpen={setSelectedEvent} onAdd={() => openNew()} loading={loading} highlightedEventId={highlightedEventId} />
               : <MonthView events={events} onRange={rangeLoader} onOpen={setSelectedEvent} onAdd={openNew} />}
           </section>
 
@@ -179,7 +213,7 @@ const GroupPage = () => {
         </div>
         )}
         {tab === 'forum' && (
-          <div id="group-panel-forum" role="tabpanel" aria-labelledby="group-tab-forum"><GroupForum key={groupId} groupId={groupId} members={members} currentUserId={myId} isCreator={isCreator} isAdmin={Boolean(user?.isAdmin)} /></div>
+          <div id="group-panel-forum" role="tabpanel" aria-labelledby="group-tab-forum"><GroupForum key={groupId} groupId={groupId} members={members} currentUserId={myId} isCreator={isCreator} isAdmin={Boolean(user?.isAdmin)} onEventClick={openMentionedEvent} /></div>
         )}
         {tab === 'resources' && (
           <div id="group-panel-resources" role="tabpanel" aria-labelledby="group-tab-resources"><GroupResources key={groupId} groupId={groupId} currentUserId={myId} isCreator={isCreator} isAdmin={Boolean(user?.isAdmin)} /></div>

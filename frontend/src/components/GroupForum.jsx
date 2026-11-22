@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { AtSign, LoaderCircle, MessageCircle, MoreHorizontal, Send, Trash2 } from 'lucide-react';
 import {
   createGroupComment, createGroupPost, deleteGroupComment, deleteGroupPost,
-  fetchGroupComments, fetchGroupEvents, fetchGroupPosts,
+  fetchGroupComments, fetchGroupEvents, fetchGroupPosts, searchGroupResources,
 } from '../services/api';
 import GroupRichText from './GroupRichText';
 
@@ -10,10 +10,14 @@ const errorText = (error, fallback) => error.response?.data?.message || fallback
 const userIdOf = (value) => String(value?._id ?? value?.id ?? value ?? '');
 const authorName = (author) => author?.username || 'Miembro';
 
-function MessageComposer({ groupId, members, value, onChange, onSubmit, disabled, placeholder, buttonLabel, maxLength = 4000 }) {
+function MessageComposer({ groupId, members, value, onChange, onSubmit, disabled, placeholder, buttonLabel, maxLength = 4000, onEventClick }) {
   const textarea = useRef(null);
   const [suggestion, setSuggestion] = useState(null);
   const [eventOptions, setEventOptions] = useState([]);
+  const [resourceOptions, setResourceOptions] = useState([]);
+  const [eventRefs, setEventRefs] = useState({});
+  const [resourceRefs, setResourceRefs] = useState({});
+  const [preview, setPreview] = useState(false);
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState('');
   const requestId = useRef(0);
@@ -21,14 +25,15 @@ function MessageComposer({ groupId, members, value, onChange, onSubmit, disabled
 
   const updateSuggestion = (text, cursor) => {
     const before = text.slice(0, cursor);
-    const match = before.match(/(?:^|\s)([@/])([^\s@/]*)$/);
+    const match = before.match(/(?:^|\s)([@/!])([^\s@/!]*)$/);
     setSuggestion(match ? { type: match[1], query: match[2], start: cursor - match[0].length + match[0].indexOf(match[1]) } : null);
   };
 
   useEffect(() => {
     const sequence = ++requestId.current;
-    if (suggestion?.type !== '/' || suggestion.query.length < 1) {
+    if (!['/', '!'].includes(suggestion?.type) || suggestion.query.length < 1) {
       setEventOptions([]);
+      setResourceOptions([]);
       setSearching(false);
       setSearchError('');
       return undefined;
@@ -37,11 +42,17 @@ function MessageComposer({ groupId, members, value, onChange, onSubmit, disabled
       setSearching(true);
       setSearchError('');
       try {
-        const { data } = await fetchGroupEvents(groupId, { q: suggestion.query });
-        if (sequence === requestId.current) setEventOptions(data);
+        const { data } = suggestion.type === '/'
+          ? await fetchGroupEvents(groupId, { q: suggestion.query })
+          : await searchGroupResources(groupId, suggestion.query);
+        if (sequence === requestId.current) {
+          if (suggestion.type === '/') setEventOptions(data);
+          else setResourceOptions(data);
+        }
       } catch {
         if (sequence === requestId.current) {
-          setEventOptions([]);
+          if (suggestion.type === '/') setEventOptions([]);
+          else setResourceOptions([]);
           setSearchError('No se pudieron buscar eventos.');
         }
       } finally {
@@ -51,11 +62,13 @@ function MessageComposer({ groupId, members, value, onChange, onSubmit, disabled
     return () => window.clearTimeout(timer);
   }, [groupId, suggestion]);
 
-  const insertSuggestion = (valueToInsert) => {
+  const insertSuggestion = (valueToInsert, refType, reference) => {
     const start = suggestion.start;
     const end = cursorRef.current;
     const next = `${value.slice(0, start)}${valueToInsert} ${value.slice(end)}`;
     onChange(next);
+    if (refType === 'event') setEventRefs((current) => ({ ...current, [reference._id]: reference }));
+    if (refType === 'resource') setResourceRefs((current) => ({ ...current, [reference._id]: reference }));
     setSuggestion(null);
     requestAnimationFrame(() => {
       textarea.current?.focus();
@@ -66,7 +79,16 @@ function MessageComposer({ groupId, members, value, onChange, onSubmit, disabled
 
   const options = suggestion?.type === '@'
     ? members.filter((member) => member.username.toLowerCase().startsWith(suggestion.query.toLowerCase())).slice(0, 6)
-    : eventOptions;
+    : suggestion?.type === '/'
+      ? eventOptions
+      : resourceOptions;
+
+  useEffect(() => {
+    if (value) return;
+    setPreview(false);
+    setEventRefs({});
+    setResourceRefs({});
+  }, [value]);
 
   return (
     <form onSubmit={onSubmit} className="space-y-2">
@@ -79,6 +101,7 @@ function MessageComposer({ groupId, members, value, onChange, onSubmit, disabled
           maxLength={maxLength}
           value={value}
           onChange={(event) => {
+            setPreview(false);
             onChange(event.target.value);
             cursorRef.current = event.target.selectionStart;
             updateSuggestion(event.target.value, event.target.selectionStart);
@@ -112,25 +135,43 @@ function MessageComposer({ groupId, members, value, onChange, onSubmit, disabled
             {searching && <p className="p-3 text-sm text-muted">Buscando eventos…</p>}
             {!searching && searchError && <p role="alert" className="p-3 text-sm text-danger">{searchError}</p>}
             {!searching && suggestion.query.length === 0 && <p className="p-3 text-sm text-muted">Escribí un título o código después de /</p>}
-            {!searching && suggestion.query.length > 0 && !options.length && <p className="p-3 text-sm text-muted">No se encontraron eventos</p>}
+            {!searching && !searchError && suggestion.query.length > 0 && !options.length && <p className="p-3 text-sm text-muted">No se encontraron eventos</p>}
             {options.map((event) => (
-              <button key={event._id} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => insertSuggestion(`/${event._id}`)} className="flex min-h-12 w-full flex-col items-start justify-center px-3 text-left hover:bg-surface-2">
+              <button key={event._id} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => insertSuggestion(`/${event._id}`, 'event', event)} className="flex min-h-12 w-full flex-col items-start justify-center px-3 text-left hover:bg-surface-2">
                 <span className="max-w-full truncate font-semibold">{event.title}</span>
                 <span className="text-xs text-muted">/{event._id}</span>
               </button>
             ))}
           </div>
         )}
+        {suggestion?.type === '!' && (
+          <div className="absolute bottom-full left-0 z-20 mb-1 w-full overflow-hidden rounded-xl border border-line bg-surface shadow-lg">
+            {searching && <p className="p-3 text-sm text-muted">Buscando recursos…</p>}
+            {!searching && searchError && <p role="alert" className="p-3 text-sm text-danger">{searchError}</p>}
+            {!searching && suggestion.query.length === 0 && <p className="p-3 text-sm text-muted">Escribí el título del recurso después de !</p>}
+            {!searching && !searchError && suggestion.query.length > 0 && !options.length && <p className="p-3 text-sm text-muted">No se encontraron recursos</p>}
+            {options.map((resource) => (
+              <button key={resource._id} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => insertSuggestion(`!${resource._id}`, 'resource', resource)} className="flex min-h-12 w-full flex-col items-start justify-center px-3 text-left hover:bg-surface-2">
+                <span className="max-w-full truncate font-semibold">{resource.title}</span>
+                <span className="text-xs text-muted">!{resource._id}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs text-muted">Markdown, @ menciones y /eventos · {value.length}/{maxLength}</p>
+        <div className="flex flex-wrap items-center gap-3">
+          <p className="text-xs text-muted">Markdown, @ menciones, /eventos y !recursos · {value.length}/{maxLength}</p>
+          <button type="button" aria-pressed={preview} onClick={() => setPreview((current) => !current)} className="btn btn-quiet btn-sm">{preview ? 'Editar' : 'Vista previa'}</button>
+        </div>
         <button type="submit" className="btn btn-primary btn-sm" disabled={disabled || !value.trim()}><Send size={15} aria-hidden="true" /> {buttonLabel}</button>
       </div>
+      {preview && <div className="card min-h-20 p-4" aria-label="Vista previa del mensaje"><GroupRichText content={value} eventRefs={eventRefs} resourceRefs={resourceRefs} onEventClick={onEventClick} interactiveMentions={false} /></div>}
     </form>
   );
 }
 
-function CommentThread({ groupId, post, members, currentUserId, canModerate }) {
+function CommentThread({ groupId, post, members, currentUserId, canModerate, onEventClick }) {
   const [comments, setComments] = useState([]);
   const [cursor, setCursor] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -181,7 +222,7 @@ function CommentThread({ groupId, post, members, currentUserId, canModerate }) {
 
   return (
     <div className="mt-4 space-y-4 border-t border-line pt-4">
-      <MessageComposer groupId={groupId} members={members} value={content} onChange={setContent} onSubmit={submit} disabled={sending} placeholder="Dejá un comentario…" buttonLabel="Comentar" maxLength={2000} />
+      <MessageComposer groupId={groupId} members={members} value={content} onChange={setContent} onSubmit={submit} disabled={sending} placeholder="Dejá un comentario…" buttonLabel="Comentar" maxLength={2000} onEventClick={onEventClick} />
       {error && <p role="alert" className="rounded-xl bg-danger-soft p-3 text-sm text-danger">{error}</p>}
       {loading && !comments.length && <p className="text-sm text-muted">Cargando comentarios…</p>}
       <div className="space-y-3">
@@ -196,7 +237,7 @@ function CommentThread({ groupId, post, members, currentUserId, canModerate }) {
                   {removable && <button type="button" onClick={() => remove(comment)} aria-label="Borrar comentario" className="rounded-lg p-1 hover:text-danger"><Trash2 size={15} aria-hidden="true" /></button>}
                 </div>
               </div>
-              <div className="text-sm"><GroupRichText content={comment.content} /></div>
+              <div className="text-sm"><GroupRichText content={comment.content} eventRefs={comment.eventRefs} resourceRefs={comment.resourceRefs} onEventClick={onEventClick} /></div>
             </article>
           );
         })}
@@ -206,7 +247,7 @@ function CommentThread({ groupId, post, members, currentUserId, canModerate }) {
   );
 }
 
-export default function GroupForum({ groupId, members, currentUserId, isCreator, isAdmin }) {
+export default function GroupForum({ groupId, members, currentUserId, isCreator, isAdmin, onEventClick }) {
   const [posts, setPosts] = useState([]);
   const [cursor, setCursor] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -261,7 +302,7 @@ export default function GroupForum({ groupId, members, currentUserId, isCreator,
     <section aria-labelledby="group-forum-title" className="space-y-5">
       <div className="card p-4 sm:p-5">
         <h2 id="group-forum-title" className="mb-3 text-xl font-bold">Conversación del grupo</h2>
-        <MessageComposer groupId={groupId} members={members} value={content} onChange={setContent} onSubmit={submit} disabled={sending} placeholder="Compartí una idea, consulta o actualización…" buttonLabel="Publicar" />
+        <MessageComposer groupId={groupId} members={members} value={content} onChange={setContent} onSubmit={submit} disabled={sending} placeholder="Compartí una idea, consulta o actualización…" buttonLabel="Publicar" onEventClick={onEventClick} />
         {error && <p role="alert" className="mt-3 rounded-xl bg-danger-soft p-3 text-sm text-danger">{error}</p>}
       </div>
 
@@ -278,11 +319,11 @@ export default function GroupForum({ groupId, members, currentUserId, isCreator,
               </div>
               {removable && <button type="button" onClick={() => remove(post)} aria-label="Borrar mensaje" className="flex h-10 w-10 items-center justify-center rounded-full text-muted hover:bg-danger-soft hover:text-danger"><Trash2 size={17} aria-hidden="true" /></button>}
             </header>
-            <div className="text-[0.98rem]"><GroupRichText content={post.content} /></div>
+            <div className="text-[0.98rem]"><GroupRichText content={post.content} eventRefs={post.eventRefs} resourceRefs={post.resourceRefs} onEventClick={onEventClick} /></div>
             <button type="button" onClick={() => setActivePost((current) => current === post._id ? '' : post._id)} aria-expanded={activePost === post._id} className="mt-4 inline-flex min-h-10 items-center gap-2 text-sm font-semibold text-muted hover:text-ink">
               <MoreHorizontal size={17} aria-hidden="true" /> {activePost === post._id ? 'Ocultar comentarios' : 'Comentar o ver conversación'}
             </button>
-            {activePost === post._id && <CommentThread key={post._id} groupId={groupId} post={post} members={members} currentUserId={currentUserId} canModerate={canModerate} />}
+            {activePost === post._id && <CommentThread key={post._id} groupId={groupId} post={post} members={members} currentUserId={currentUserId} canModerate={canModerate} onEventClick={onEventClick} />}
           </article>
         );
       })}

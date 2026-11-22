@@ -116,15 +116,17 @@ export default function GroupResources({ groupId, currentUserId, isCreator, isAd
           const domain = (() => { try { return new URL(resource.url).hostname.replace(/^www\./, ''); } catch { return 'Enlace externo'; } })();
           const removable = isCreator || isAdmin || idOf(resource.createdBy) === currentUserId;
           return (
-            <article key={resource._id} className="card flex min-w-0 gap-3 p-4">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent-text"><Icon size={21} aria-hidden="true" /></span>
-              <div className="min-w-0 flex-1">
-                <a href={resource.url} target="_blank" rel="noopener noreferrer" className="break-words font-bold text-ink hover:text-accent-text hover:underline">{resource.title}</a>
-                <p className="mt-1 flex items-center gap-1.5 text-xs text-muted"><span>{type}</span><span aria-hidden="true">·</span><span className="truncate">{domain}</span></p>
-                {resource.description && <p className="mt-2 line-clamp-3 text-sm text-muted">{resource.description}</p>}
-                <p className="mt-2 text-xs text-muted">Agregó {resource.createdBy?.username || 'un miembro'}</p>
-              </div>
-              {removable && <button type="button" onClick={() => remove(resource)} aria-label={`Borrar ${resource.title}`} title="Borrar recurso" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-muted hover:bg-danger-soft hover:text-danger"><Trash2 size={17} aria-hidden="true" /></button>}
+            <article key={resource._id} className="card relative min-w-0">
+              <a href={resource.url} target="_blank" rel="noopener noreferrer" aria-label={`Abrir ${resource.title} en ${domain}`} className="flex min-h-full min-w-0 items-start gap-3 rounded-[inherit] p-4 pr-14 hover:bg-surface-2 focus-visible:outline">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent-text"><Icon size={21} aria-hidden="true" /></span>
+                <span className="min-w-0 flex-1">
+                  <span className="block break-words font-bold text-ink">{resource.title}</span>
+                  <span className="mt-1 flex items-center gap-1.5 text-xs text-muted"><span>{type}</span><span aria-hidden="true">·</span><span className="truncate">{domain}</span></span>
+                  {resource.description && <span className="mt-2 block line-clamp-3 text-sm text-muted">{resource.description}</span>}
+                  <span className="mt-2 block text-xs text-muted">Agregó {resource.createdBy?.username || 'un miembro'}</span>
+                </span>
+              </a>
+              {removable && <button type="button" onClick={() => remove(resource)} aria-label={`Borrar ${resource.title}`} title="Borrar recurso" className="absolute right-2 top-2 flex h-10 w-10 items-center justify-center rounded-full text-muted hover:bg-danger-soft hover:text-danger"><Trash2 size={17} aria-hidden="true" /></button>}
             </article>
           );
         })}

@@ -3,14 +3,14 @@ import { DEFAULT_EVENT_COLOR, dayNum, daysUntil, fmt, relative, relClass } from 
 
 // Una fila de la agenda: fecha grande, título, quién lo creó y cuánto falta.
 // "line" añade el punto de color sobre la línea de tiempo de la agenda.
-const EventRow = ({ event, onOpen, line = false }) => {
+const EventRow = ({ event, onOpen, line = false, highlighted = false }) => {
   const n = daysUntil(event.dueDate);
   const ms = dayNum(event.dueDate);
   const color = event.color || DEFAULT_EVENT_COLOR;
   return (
     <li className="relative">
       {line && <span aria-hidden="true" className="absolute -left-8 top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full ring-4 ring-bg" style={{ background: color }} />}
-      <button type="button" onClick={() => onOpen(event)} className={`card card-lift flex w-full items-center gap-4 p-4 text-left ${n < 0 ? 'opacity-70' : ''}`}>
+      <button id={`group-event-${event._id}`} type="button" onClick={() => onOpen(event)} className={`card card-lift flex w-full items-center gap-4 p-4 text-left transition-shadow ${n < 0 ? 'opacity-70' : ''} ${highlighted ? 'ring-2 ring-accent shadow-xl' : ''}`}>
         <span className="w-12 shrink-0 text-center" aria-hidden="true">
           <span className="block text-xs font-bold uppercase tracking-wide text-muted">{fmt(ms, { weekday: 'short' }).replace('.', '')}</span>
           <span className="block font-display text-3xl font-extrabold leading-none">{new Date(ms).getUTCDate()}</span>
