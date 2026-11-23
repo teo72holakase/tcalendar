@@ -27,7 +27,7 @@ const GroupSchema = new mongoose.Schema({
   inviteCode: {
     type: String,
     unique: true,
-    default: () => crypto.randomBytes(4).toString('hex').toUpperCase(),
+    default: () => crypto.randomInt(0, 1000000).toString().padStart(6, '0'),
   },
   createdAt: {
     type: Date,

@@ -45,6 +45,8 @@ export const fetchGroups         = ()                  => api.get('/groups');
 export const createGroup         = (payload)           => api.post('/groups', payload);
 export const deleteGroup         = (groupId)           => api.delete(`/groups/${groupId}`);
 export const inviteMember        = (groupId, payload)  => api.post(`/groups/${groupId}/invite`, payload);
+export const generateGroupCode   = (groupId)           => api.post('/invites/code', { groupId });
+export const joinGroupByCode     = (code)              => api.post('/invites/join-code', { code });
 export const removeMember        = (groupId, memberId) => api.delete(`/groups/${groupId}/members/${memberId}`);
 export const fetchGroupEvents    = (groupId, params)  => api.get(`/groups/${groupId}/events`, { params });
 export const fetchGroupPosts     = (groupId, cursor)  => api.get(`/groups/${groupId}/posts`, { params: cursor ? { cursor } : {} });

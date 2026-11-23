@@ -3,6 +3,59 @@ const Group = require('../models/Group');
 const crypto = require('crypto');
 
 const generateToken = () => crypto.randomBytes(8).toString('hex');
+const generateGroupCodeValue = () => crypto.randomInt(0, 1000000).toString().padStart(6, '0');
+
+const generateGroupCode = async (req, res) => {
+  try {
+    const group = await Group.findById(req.body.groupId);
+    if (!group) return res.status(404).json({ message: 'Grupo no encontrado' });
+    if (group.creator.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Solo el creador puede generar códigos de invitación' });
+    }
+
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      group.inviteCode = generateGroupCodeValue();
+      try {
+        await group.save();
+        return res.json({ code: group.inviteCode, message: 'Código generado correctamente' });
+      } catch (error) {
+        if (error.code !== 11000) throw error;
+      }
+    }
+
+    return res.status(503).json({ message: 'No se pudo generar un código único. Intentá de nuevo.' });
+  } catch (error) {
+    console.error('Error generateGroupCode:', error);
+    return res.status(500).json({ message: 'Error al generar el código' });
+  }
+};
+
+const joinGroupByCode = async (req, res) => {
+  try {
+    const code = String(req.body.code || '').trim();
+    if (!/^\d{6}$/.test(code)) {
+      return res.status(400).json({ message: 'El código debe tener 6 números' });
+    }
+
+    const group = await Group.findOne({ inviteCode: code });
+    if (!group) return res.status(404).json({ message: 'Código de grupo no válido' });
+    if (group.members.some((member) => member.toString() === req.user._id.toString())) {
+      return res.status(400).json({ message: 'Ya eres miembro de este grupo' });
+    }
+
+    const result = await Group.updateOne(
+      { _id: group._id, inviteCode: code },
+      { $addToSet: { members: req.user._id } }
+    );
+    if (result.matchedCount === 0) {
+      return res.status(404).json({ message: 'Código de grupo no válido' });
+    }
+    res.json({ success: true, groupId: group._id, message: 'Te has unido al grupo correctamente' });
+  } catch (error) {
+    console.error('Error joinGroupByCode:', error);
+    res.status(500).json({ message: 'Error al unirse al grupo' });
+  }
+};
 
 const createInvite = async (req, res) => {
   try {
@@ -33,7 +86,7 @@ const createInvite = async (req, res) => {
 
     await invite.save();
 
-    const inviteLink = `${process.env.CLIENT_URL || 'http://localhost:5173'}/invite/${token}`;
+    const inviteLink = `https://tcalendar.devs.surf/invite/${token}`;
     res.status(201).json({ invite: { token }, inviteLink, message: 'Invitación creada correctamente' });
   } catch (error) {
     console.error('Error createInvite:', error);
@@ -123,4 +176,4 @@ const joinGroup = async (req, res) => {
   }
 };
 
-module.exports = { createInvite, validateInvite, joinGroup };
+module.exports = { createInvite, validateInvite, joinGroup, generateGroupCode, joinGroupByCode };

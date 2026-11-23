@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect, useRef } from 'react';
 import {
   createGroup as apiCreateGroup, fetchGroups, fetchGroupEvents,
   createGroupEvent, deleteEvent, updateEventColor, updateEvent as apiUpdateEvent, inviteMember, fetchGroupMembers,
-  removeMember as apiRemoveMember, deleteGroup as apiDeleteGroup,
+  removeMember as apiRemoveMember, deleteGroup as apiDeleteGroup, joinGroupByCode as apiJoinGroupByCode,
 } from '../services/api';
 import { useAuth } from './AuthContext';
 
@@ -191,6 +191,19 @@ export const GroupProvider = ({ children }) => {
     } finally { setLoading(false); }
   };
 
+  const joinGroupByCode = async (code) => {
+    setLoading(true); setError('');
+    try {
+      const { data } = await apiJoinGroupByCode(code);
+      await loadGroups(true);
+      setMessage(data.message || 'Te has unido al grupo correctamente');
+      return data.groupId;
+    } catch (err) {
+      setError(err.response?.data?.message || 'No se pudo encontrar el grupo');
+      return null;
+    } finally { setLoading(false); }
+  };
+
   const loadMembers = async (groupId) => {
     setLoading(true); setError('');
     try {
@@ -222,7 +235,7 @@ export const GroupProvider = ({ children }) => {
       setSelectedGroup, setMessage, setError,
       loadGroups, createGroup, removeGroup,
       loadEvents, createEvent, removeEvent, updateEvent, changeEventColor, resetGroupData,
-      inviteToGroup, loadMembers, removeMember,
+      inviteToGroup, joinGroupByCode, loadMembers, removeMember,
     }}>
       {children}
     </GroupContext.Provider>

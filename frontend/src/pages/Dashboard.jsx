@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Plus, Users } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import GroupCard from '../components/GroupCard';
 import CreateGroupModal from '../components/CreateGroupModal';
@@ -8,9 +9,19 @@ import { useGroup } from '../contexts/GroupContext';
 
 const Dashboard = () => {
   const { user } = useAuth();
-  const { groups, loading, error, createGroup, message, setError } = useGroup();
+  const { groups, loading, error, createGroup, joinGroupByCode, message, setError } = useGroup();
   const [open, setOpen] = useState(false);
+  const [code, setCode] = useState('');
+  const navigate = useNavigate();
   const myId = String(user?.id ?? user?._id ?? '');
+  const enterWithCode = async (event) => {
+    event.preventDefault();
+    const groupId = await joinGroupByCode(code);
+    if (groupId) {
+      setCode('');
+      navigate(`/group/${groupId}`);
+    }
+  };
 
   return (
     <div className="min-h-dvh">
@@ -21,7 +32,27 @@ const Dashboard = () => {
             <p className="text-muted">Hola, {user?.username}</p>
             <h1 className="font-display text-4xl font-extrabold sm:text-5xl">Tus grupos</h1>
           </div>
-          <button onClick={() => { setError(''); setOpen(true); }} className="btn btn-primary"><Plus size={20} aria-hidden="true" /> Nuevo grupo</button>
+          <div className="flex flex-wrap items-end gap-3">
+            <form onSubmit={enterWithCode} className="flex items-end gap-2">
+              <label className="min-w-0">
+                <span className="field-label">Código de Grupo</span>
+                <input
+                  aria-label="Código de Grupo"
+                  autoComplete="one-time-code"
+                  inputMode="numeric"
+                  maxLength={6}
+                  pattern="[0-9]{6}"
+                  placeholder="123456"
+                  required
+                  value={code}
+                  onChange={(event) => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
+                  className="field w-32 text-center font-mono tracking-widest"
+                />
+              </label>
+              <button type="submit" disabled={loading || code.length !== 6} className="btn btn-quiet">{loading ? 'Entrando…' : 'Entrar'}</button>
+            </form>
+            <button onClick={() => { setError(''); setOpen(true); }} className="btn btn-primary"><Plus size={20} aria-hidden="true" /> Nuevo grupo</button>
+          </div>
         </div>
 
         {(message || error) && (

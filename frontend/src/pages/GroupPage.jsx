@@ -8,7 +8,6 @@ import MembersPanel from '../components/MembersPanel';
 import { AvatarStack } from '../components/Avatar';
 import EventFormModal from '../components/EventFormModal';
 import EventDetailsModal from '../components/EventDetailsModal';
-import InviteMemberModal from '../components/InviteMemberModal';
 import CreateInviteModal from '../components/CreateInviteModal';
 import DeleteGroupModal from '../components/DeleteGroupModal';
 import GroupForum from '../components/GroupForum';
@@ -33,7 +32,6 @@ const GroupPage = () => {
   const [tab, setTab] = useState('calendar');
   const [eventModal, setEventModal] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [linkOpen, setLinkOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [focusedEvent, setFocusedEvent] = useState(null);
@@ -207,7 +205,7 @@ const GroupPage = () => {
 
           <MembersPanel
             members={members} creatorId={creatorId} myId={myId} isCreator={isCreator} loading={loading}
-            onInvite={() => setInviteOpen(true)} onLink={() => setLinkOpen(true)} onRemove={kick} onDelete={() => setDeleteOpen(true)}
+            onInvite={() => { setInviteError(''); setInviteOpen(true); }} onRemove={kick} onDelete={() => setDeleteOpen(true)}
           />
         </div>
         <div id="group-panel-forum" role="tabpanel" aria-labelledby="group-tab-forum" hidden={tab !== 'forum'} className={tab === 'forum' ? '' : 'hidden'}><GroupForum key={groupId} groupId={groupId} members={members} currentUserId={myId} isCreator={isCreator} isAdmin={Boolean(user?.isAdmin)} onEventClick={openMentionedEvent} active={tab === 'forum'} /></div>
@@ -223,8 +221,7 @@ const GroupPage = () => {
         open={Boolean(selectedEvent)} onClose={() => { setSelectedEvent(null); setError(''); }} event={selectedEvent}
         onDelete={remove} onEdit={startEdit} onColorChange={changeColor} canDelete={Boolean(selectedEvent) && canManage(selectedEvent)} loading={loading} error={error}
       />
-      <InviteMemberModal open={inviteOpen} onClose={() => { setInviteOpen(false); setInviteError(''); }} onInvite={invite} loading={loading} error={inviteError || (inviteOpen ? error : '')} />
-      <CreateInviteModal groupId={groupId} open={linkOpen} onClose={() => setLinkOpen(false)} />
+      <CreateInviteModal groupId={groupId} open={inviteOpen} onClose={() => { setInviteOpen(false); setInviteError(''); }} onInvite={invite} loading={loading} error={inviteError || (inviteOpen ? error : '')} />
       <DeleteGroupModal open={deleteOpen} onClose={() => setDeleteOpen(false)} onConfirm={async () => { if (await removeGroup(groupId)) navigate('/dashboard'); }} groupName={group?.name || ''} loading={loading} />
     </div>
   );

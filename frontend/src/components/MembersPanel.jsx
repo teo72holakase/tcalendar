@@ -1,15 +1,12 @@
-import { Crown, Link2, Trash2, UserMinus, UserPlus } from 'lucide-react';
+import { Crown, Trash2, UserPlus, UserMinus } from 'lucide-react';
 import { Avatar } from './Avatar';
 
-const MembersPanel = ({ members, creatorId, myId, isCreator, loading, onInvite, onLink, onRemove, onDelete }) => (
+const MembersPanel = ({ members, creatorId, myId, isCreator, loading, onInvite, onRemove, onDelete }) => (
   <section id="miembros" aria-label="Miembros del grupo" className="card p-5">
     <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
       <h2 className="text-xl font-bold">Miembros <span className="font-medium text-muted">{members.length}</span></h2>
       {isCreator && (
-        <div className="flex gap-2">
-          <button type="button" onClick={onLink} className="btn btn-quiet btn-sm"><Link2 size={16} aria-hidden="true" /> Enlace</button>
-          <button type="button" onClick={onInvite} className="btn btn-primary btn-sm"><UserPlus size={16} aria-hidden="true" /> Invitar</button>
-        </div>
+        <button type="button" onClick={onInvite} className="btn btn-primary btn-sm"><UserPlus size={16} aria-hidden="true" /> Invitar</button>
       )}
     </div>
     <ul className="divide-y divide-line">
